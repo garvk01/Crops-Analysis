@@ -1,0 +1,35 @@
+.card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 18px;
+}
+.small { padding: 13px 15px; }
+
+.metricCard {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 13px 15px;
+  display: flex; align-items: center; gap: 11px;
+}
+.metricLabel {
+  font-size: 9.5px; font-weight: 500; color: var(--text-ter);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+}
+.metricValue { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+.metricSub   { font-size: 10.5px; color: var(--text-sec); margin-top: 3px; }
+
+.stageCard {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 13px 15px;
+  display: flex; align-items: flex-start; gap: 11px;
+}
+.stageIcon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+.green  { background: var(--green-50); }
+.blue   { background: var(--blue-50); }
+.amber  { background: var(--amber-50); }
+.stageLabel { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-ter); font-weight: 500; }
+.stageDate  { font-size: 13.5px; font-weight: 600; margin-top: 2px; color: var(--text); }
+.stageNdvi  { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+.stageConf  { font-size: 10px; color: var(--text-ter); margin-top: 1px; }

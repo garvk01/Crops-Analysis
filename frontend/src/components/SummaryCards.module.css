@@ -1,0 +1,12 @@
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 15px; transition: border-color .14s; }
+.card:hover { border-color: var(--border-med); }
+.cardTop { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.iconWrap { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; border: 1px solid; white-space: nowrap; }
+.val  { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+.unit { font-size: 12px; font-weight: 400; color: var(--text-sec); margin-left: 2px; }
+.label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-ter); font-weight: 500; margin-top: 5px; }
+.sub   { font-size: 10.5px; color: var(--text-ter); margin-top: 2px; }
+@media (max-width: 860px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .grid { grid-template-columns: 1fr 1fr; } }

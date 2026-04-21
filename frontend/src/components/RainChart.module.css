@@ -1,0 +1,10 @@
+.wrap { width: 100%; }
+.legend { display: flex; gap: 16px; margin-bottom: 9px; }
+.legendItem { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-sec); }
+.barIcon { width: 13px; height: 8px; background: rgba(90,143,163,.2); border: 1px solid #5a8fa3; border-radius: 2px; display: inline-block; }
+.lineIcon { width: 14px; height: 2.5px; background: var(--green-600); border-radius: 2px; display: inline-block; }
+.chartWrap { position: relative; width: 100%; }
+.tooltip { background: #1c2620; border: 1px solid rgba(141,176,122,.15); border-radius: 8px; padding: 8px 11px; font-size: 12px; }
+.tooltipLabel { font-size: 10.5px; color: #576a54; margin-bottom: 4px; font-weight: 500; }
+.tooltipRow { display: flex; align-items: center; gap: 5px; color: #d4cfc4; margin-top: 2px; font-size: 11.5px; }
+.tooltipRow strong { color: white; }

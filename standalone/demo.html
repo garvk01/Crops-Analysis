@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CropCycle — Crop Cycle Analysis System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── Colour palette: split-complementary, muted earth tones ──
+     Base:    #0f1410  deep forest night
+     Primary: #3d6b45  muted sage green
+     Accent:  #8fb07a  light moss
+     Warm:    #c8a96e  dry wheat / amber (split-complementary warm)
+     Cool:    #5a8fa3  slate blue (split-complementary cool)
+     Alert:   #b85c4a  terracotta (complementary accent)
+  */
+  :root {
+    --bg:       #0f1410;
+    --surface:  #161d17;
+    --surface2: #1c2620;
+    --surface3: #22302a;
+    --surface4: #2a3d32;
+    --border:   rgba(141,176,122,0.10);
+    --border-med: rgba(141,176,122,0.20);
+    --text:     #d4cfc4;
+    --text-sec: #8fa88a;
+    --text-ter: #576a54;
+    --green-50:  rgba(61,107,69,0.15);
+    --green-100: rgba(61,107,69,0.25);
+    --green-400: #3d6b45;
+    --green-600: #8fb07a;
+    --green-800: #b8d4a2;
+    --amber-50:  rgba(200,169,110,0.12);
+    --amber-400: #c8a96e;
+    --amber-600: #e8c98a;
+    --red-50:    rgba(184,92,74,0.12);
+    --red-400:   #b85c4a;
+    --red-600:   #d4876f;
+    --blue-50:   rgba(90,143,163,0.12);
+    --blue-400:  #5a8fa3;
+    --blue-600:  #8ab8cc;
+    --radius: 10px;
+    --radius-lg: 13px;
+  }
+  html { font-family: 'DM Sans', system-ui, sans-serif; font-size: 14px; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Layout ── */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 210px; min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    transition: transform 0.3s ease;
+  }
+  .sidebar-logo {
+    padding: 22px 20px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon { width: 34px; height: 34px; background: var(--green-400); border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-icon svg { width: 20px; height: 20px; fill: white; }
+  .logo-text { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--text-ter); letter-spacing: 0.5px; text-transform: uppercase; }
+  .sidebar-nav { padding: 12px 10px; flex: 1; }
+  .nav-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-ter); padding: 8px 10px 4px; font-weight: 500; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+    cursor: pointer; transition: all 0.15s; color: var(--text-sec); font-size: 13.5px;
+    font-weight: 400; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--green-50); color: var(--green-600); font-weight: 500; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.8; }
+  .nav-item.active svg { opacity: 1; }
+  .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+  .user-chip {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--surface2); border-radius: 8px; cursor: pointer;
+  }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--green-100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: var(--green-600); flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .user-role { font-size: 11px; color: var(--text-ter); }
+  .main { margin-left: 210px; flex: 1; }
+  .topbar {
+    height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .page-title { font-size: 15px; font-weight: 500; color: var(--text); }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .content { padding: 28px; max-width: 1200px; }
+
+  /* ── Auth ── */
+  .auth-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 20px;
+  }
+  .auth-card {
+    width: 100%; max-width: 420px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px 36px;
+  }
+  .auth-brand { text-align: center; margin-bottom: 32px; }
+  .auth-logo { width: 52px; height: 52px; background: var(--green-400); border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+  .auth-logo svg { width: 30px; height: 30px; fill: white; }
+  .auth-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--text); }
+  .auth-sub { font-size: 13px; color: var(--text-sec); margin-top: 4px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-sec);
+    margin-bottom: 6px; letter-spacing: 0.2px; }
+  .form-input {
+    width: 100%; padding: 10px 13px; border: 1px solid var(--border-med);
+    border-radius: 8px; background: var(--surface); color: var(--text);
+    font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--green-400); box-shadow: 0 0 0 3px rgba(63,168,58,0.12); }
+  .form-input::placeholder { color: var(--text-ter); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; border: none; font-family: inherit;
+  }
+  .btn-primary { background: var(--green-400); color: white; width: 100%; padding: 12px; }
+  .btn-primary:hover { background: var(--green-600); }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border-med); color: var(--text);
+    font-size: 13px;
+  }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-sm { padding: 7px 13px; font-size: 12.5px; }
+  .btn-danger { background: var(--red-50); color: var(--red-600); border: 1px solid var(--red-400); }
+  .btn-danger:hover { background: var(--red-400); color: white; }
+  .auth-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-sec); }
+  .auth-switch a { color: var(--green-600); cursor: pointer; font-weight: 500; }
+  .auth-error { background: var(--red-50); color: var(--red-600); border: 1px solid rgba(212,74,42,0.2);
+    border-radius: 8px; padding: 10px 13px; font-size: 13px; margin-bottom: 14px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 22px 24px;
+  }
+  .card-sm { padding: 16px 18px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text-sec); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-val { font-size: 26px; font-weight: 600; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: 12px; color: var(--text-ter); margin-top: 5px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ── Health Score ── */
+  .health-ring-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .health-ring { position: relative; width: 100px; height: 100px; }
+  .health-ring svg { transform: rotate(-90deg); }
+  .health-ring-label {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .health-score-num { font-size: 22px; font-weight: 700; color: var(--text); }
+  .health-score-sub { font-size: 9px; color: var(--text-ter); letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* ── Stage badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+    border-radius: 20px; font-size: 11.5px; font-weight: 500;
+  }
+  .badge-green { background: var(--green-50); color: var(--green-600); }
+  .badge-amber { background: var(--amber-50); color: var(--amber-600); }
+  .badge-red { background: var(--red-50); color: var(--red-600); }
+  .badge-blue { background: var(--blue-50); color: var(--blue-600); }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: var(--green-400); }
+  .dot-amber { background: var(--amber-400); }
+  .dot-red { background: var(--red-400); }
+
+  /* ── Stage card ── */
+  .stage-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px;
+  }
+  .stage-icon { width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+  .stage-icon.start { background: var(--green-50); }
+  .stage-icon.peak { background: var(--blue-50); }
+  .stage-icon.harvest { background: var(--amber-50); }
+  .stage-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-ter); font-weight: 500; }
+  .stage-date { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
+  .stage-ndvi { font-size: 12px; color: var(--text-sec); margin-top: 3px; }
+  .stage-conf { font-size: 11px; color: var(--text-ter); margin-top: 2px; }
+
+  /* ── Upload area ── */
+  .upload-zone {
+    border: 2px dashed var(--border-med); border-radius: var(--radius-lg); padding: 40px 20px;
+    text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--green-400); background: var(--green-50); }
+  .upload-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-title { font-size: 15px; font-weight: 500; color: var(--text); }
+  .upload-sub { font-size: 13px; color: var(--text-sec); margin-top: 6px; }
+  .demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+  .demo-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .demo-card:hover { border-color: var(--green-400); background: var(--green-50); }
+  .demo-crop { font-size: 20px; margin-bottom: 8px; }
+  .demo-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .demo-loc { font-size: 11.5px; color: var(--text-ter); margin-top: 2px; }
+
+  /* ── History list ── */
+  .history-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .history-item:hover { border-color: var(--green-400); }
+  .history-icon { font-size: 22px; width: 40px; height: 40px; background: var(--surface2);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+  .history-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .history-meta { font-size: 12px; color: var(--text-ter); margin-top: 2px; }
+  .history-score { margin-left: auto; text-align: right; }
+  .history-score-num { font-size: 20px; font-weight: 700; color: var(--green-400); }
+  .history-score-label { font-size: 10px; color: var(--text-ter); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── Phase timeline ── */
+  .phase-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 8px 0; }
+  .phase-segment { border-radius: 3px; transition: flex 0.5s ease; }
+
+  /* ── Chart ── */
+  .chart-wrap { position: relative; width: 100%; height: 320px; }
+
+  /* ── Utility ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .section-sub { font-size: 12.5px; color: var(--text-ter); margin-top: 2px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .tag { display: inline-block; padding: 2px 8px; background: var(--surface2); border-radius: 4px;
+    font-size: 11px; color: var(--text-sec); font-weight: 500; }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 60px;
+    color: var(--text-ter); font-size: 14px; gap: 10px; }
+  .spin { width: 20px; height: 20px; border: 2px solid var(--border-med);
+    border-top-color: var(--green-400); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-ter); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+    border: 1px solid var(--border-med); border-radius: 10px; padding: 12px 18px;
+    font-size: 13.5px; color: var(--text); box-shadow: var(--shadow-md);
+    z-index: 9999; animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .toast.success { border-left: 3px solid var(--green-400); }
+  .toast.error { border-left: 3px solid var(--red-400); }
+
+  /* ── Progress bar ── */
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; background: var(--green-400); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-240px); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .demo-grid { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+  }
+  select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+  /* ── Crop banner ── */
+  .crop-banner { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); background: var(--surface); display: grid; grid-template-columns: 1fr 280px; margin-bottom: 0; }
+  .crop-info-left { padding: 20px 22px; }
+  .crop-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .crop-icon-box { width: 44px; height: 44px; background: var(--green-50); border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+  .crop-name { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+  .crop-sci { font-size: 11.5px; color: var(--text-sec); font-style: italic; margin-top: 1px; }
+  .crop-location { font-size: 11px; color: var(--text-ter); margin-top: 1px; }
+  .crop-desc { font-size: 12.5px; color: var(--text-sec); line-height: 1.6; margin-bottom: 12px; }
+  .crop-facts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .fact-item { background: var(--surface2); border-radius: 7px; padding: 8px 10px; }
+  .fact-key { font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--text-ter); font-weight: 500; margin-bottom: 3px; }
+  .fact-val { font-size: 12.5px; font-weight: 500; }
+  .crop-scene { position: relative; overflow: hidden; min-height: 180px; background: var(--green-50); }
+  .crop-scene svg { width: 100%; height: 100%; display: block; }
+
+  /* ── Rain chart ── */
+  .rain-chart-wrap { position: relative; width: 100%; height: 200px; }
+  .rain-legend { display: flex; gap: 16px; margin-bottom: 10px; }
+  .rain-leg-item { font-size: 11.5px; color: var(--text-sec); display: flex; align-items: center; gap: 5px; }
+  .rain-leg-bar { width: 14px; height: 9px; border-radius: 2px; background: rgba(47,127,212,.3); border: 1px solid #2f7fd4; }
+  .rain-leg-line { width: 14px; height: 2.5px; background: var(--green-400); border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    .crop-banner { grid-template-columns: 1fr; }
+    .crop-scene { min-height: 120px; }
+    .crop-facts { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Demo datasets (mirroring backend) ──
+// ── Crop info database ──
+const CROP_INFO = {
+  wheat: {
+    sciName: 'Triticum aestivum',
+    season: 'Rabi (winter) crop',
+    sowingWindow: 'Oct 15 – Nov 15',
+    harvestWindow: 'Apr – May',
+    optimalNDVI: '0.75 – 0.90',
+    seasonLength: '140 – 160 days',
+    waterNeed: '450 – 650 mm',
+    criticalStages: 'Tillering, Anthesis',
+    description: 'Wheat is India's most important winter cereal. Punjab and Haryana contribute over 50% of national output. NDVI rises sharply from Dec through March.',
+    rainfall: [20,15,18,25,30,12,6,4], // Nov-Jun approximate
+    rainfallMonths: ['Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+    svgScene: 'wheat'
+  },
+  rice: {
+    sciName: 'Oryza sativa',
+    season: 'Kharif (monsoon) crop',
+    sowingWindow: 'Jun – Jul',
+    harvestWindow: 'Oct – Nov',
+    optimalNDVI: '0.70 – 0.85',
+    seasonLength: '110 – 140 days',
+    waterNeed: '1000 – 2000 mm',
+    criticalStages: 'Transplanting, Flowering',
+    description: 'Rice is Kerala's primary kharif staple. The crop benefits from the southwest monsoon rains (Jun–Sep). NDVI peaks in September at active tillering.',
+    rainfall: [280,420,390,210,60,20,15,12], // Jun-Jan approximate
+    rainfallMonths: ['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan'],
+    svgScene: 'rice'
+  },
+  corn: {
+    sciName: 'Zea mays',
+    season: 'Kharif (summer) crop',
+    sowingWindow: 'Jun 15 – Jul 15',
+    harvestWindow: 'Nov – Dec',
+    optimalNDVI: '0.80 – 0.92',
+    seasonLength: '90 – 120 days',
+    waterNeed: '500 – 800 mm',
+    criticalStages: 'Tasseling, Silking',
+    description: 'Corn in Maharashtra is grown as a kharif crop utilizing monsoon rainfall. It shows the fastest NDVI growth rate of the three crops, peaking in September.',
+    rainfall: [12,190,280,180,60,18,8,5], // Jun-Jan approximate
+    rainfallMonths: ['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan'],
+    svgScene: 'corn'
+  },
+  other: {
+    sciName: 'Crop species',
+    season: 'Variable',
+    sowingWindow: 'Variable',
+    harvestWindow: 'Variable',
+    optimalNDVI: '0.60 – 0.85',
+    seasonLength: '90 – 180 days',
+    waterNeed: 'Variable',
+    criticalStages: 'Vegetative, Reproductive',
+    description: 'Custom uploaded dataset. Analysis is performed using the standard NDVI crop cycle detection algorithm.',
+    rainfall: [40,35,30,28,25,20,18,15],
+    rainfallMonths: ['M1','M2','M3','M4','M5','M6','M7','M8'],
+    svgScene: 'wheat'
+  }
+};
+
+const DEMO_DATASETS = {
+  wheat_india: {
+    id: 'demo_wheat', name: 'Wheat — Punjab, India (2023)', cropType: 'wheat',
+    location: 'Punjab, India', icon: '🌾',
+    timeSeries: [
+      {date:'2023-11-01',ndvi:0.12},{date:'2023-11-15',ndvi:0.15},{date:'2023-12-01',ndvi:0.22},
+      {date:'2023-12-15',ndvi:0.31},{date:'2024-01-01',ndvi:0.42},{date:'2024-01-15',ndvi:0.55},
+      {date:'2024-02-01',ndvi:0.67},{date:'2024-02-15',ndvi:0.76},{date:'2024-03-01',ndvi:0.82},
+      {date:'2024-03-15',ndvi:0.85},{date:'2024-04-01',ndvi:0.80},{date:'2024-04-15',ndvi:0.70},
+      {date:'2024-05-01',ndvi:0.52},{date:'2024-05-15',ndvi:0.35},{date:'2024-06-01',ndvi:0.18}
+    ]
+  },
+  rice_kerala: {
+    id: 'demo_rice', name: 'Rice — Kerala, India (2023)', cropType: 'rice',
+    location: 'Kerala, India', icon: '🌿',
+    timeSeries: [
+      {date:'2023-06-01',ndvi:0.10},{date:'2023-06-15',ndvi:0.18},{date:'2023-07-01',ndvi:0.30},
+      {date:'2023-07-15',ndvi:0.48},{date:'2023-08-01',ndvi:0.62},{date:'2023-08-15',ndvi:0.74},
+      {date:'2023-09-01',ndvi:0.81},{date:'2023-09-15',ndvi:0.78},{date:'2023-10-01',ndvi:0.68},
+      {date:'2023-10-15',ndvi:0.55},{date:'2023-11-01',ndvi:0.38},{date:'2023-11-15',ndvi:0.22},
+      {date:'2023-12-01',ndvi:0.13}
+    ]
+  },
+  corn_maharashtra: {
+    id: 'demo_corn', name: 'Corn — Maharashtra, India (2023)', cropType: 'corn',
+    location: 'Maharashtra, India', icon: '🌽',
+    timeSeries: [
+      {date:'2023-06-15',ndvi:0.08},{date:'2023-07-01',ndvi:0.20},{date:'2023-07-15',ndvi:0.38},
+      {date:'2023-08-01',ndvi:0.58},{date:'2023-08-15',ndvi:0.72},{date:'2023-09-01',ndvi:0.84},
+      {date:'2023-09-15',ndvi:0.88},{date:'2023-10-01',ndvi:0.83},{date:'2023-10-15',ndvi:0.71},
+      {date:'2023-11-01',ndvi:0.55},{date:'2023-11-15',ndvi:0.38},{date:'2023-12-01',ndvi:0.20}
+    ]
+  }
+};
+
+// ── Analysis engine (client-side mirror) ──
+function smooth(series, w=3) {
+  return series.map((p,i) => {
+    const half=Math.floor(w/2), s=Math.max(0,i-half), e=Math.min(series.length-1,i+half);
+    const sl=series.slice(s,e+1), avg=sl.reduce((a,b)=>a+b.ndvi,0)/sl.length;
+    return {...p,ndvi:avg};
+  });
+}
+function analyzeCropCycle(ts) {
+  const sorted = [...ts].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const sm = smooth(sorted);
+  const ndvis = sorted.map(p=>p.ndvi);
+  const maxN=Math.max(...ndvis), minN=Math.min(...ndvis), avgN=ndvis.reduce((a,b)=>a+b,0)/ndvis.length;
+
+  // Growth start
+  const thr25 = minN+(maxN-minN)*0.25;
+  let growthStart = null;
+  for(let i=1;i<sm.length-2;i++) {
+    if(sm[i].ndvi>thr25 && sm[i].ndvi>sm[i-1].ndvi && sm[i+1].ndvi>sm[i].ndvi) {
+      growthStart={date:sorted[i].date,ndvi:sorted[i].ndvi,confidence:Math.min(100,Math.round(((sm[i].ndvi-minN)/(maxN-minN))*80+20))};
+      break;
+    }
+  }
+  if(!growthStart) growthStart={date:sorted[0].date,ndvi:sorted[0].ndvi,confidence:50};
+
+  // Peak
+  let peakIdx=0;
+  sorted.forEach((p,i)=>{if(p.ndvi>sorted[peakIdx].ndvi)peakIdx=i;});
+  const peakGrowth={date:sorted[peakIdx].date,ndvi:sorted[peakIdx].ndvi,confidence:Math.min(100,Math.round(sorted[peakIdx].ndvi*100+40))};
+
+  // Harvest
+  const thr35 = minN+(maxN-minN)*0.35;
+  const post = sorted.slice(peakIdx+1);
+  let harvest=null;
+  for(let i=1;i<post.length;i++) {
+    if(post[i].ndvi<thr35 && post[i].ndvi<post[i-1].ndvi) {
+      const drop=(maxN-post[i].ndvi)/(maxN-minN);
+      harvest={date:post[i].date,ndvi:post[i].ndvi,confidence:Math.min(100,Math.round(drop*90+10))};
+      break;
+    }
+  }
+  if(!harvest) { const l=sorted[sorted.length-1]; harvest={date:l.date,ndvi:l.ndvi,confidence:55}; }
+
+  // Metrics
+  const variance=ndvis.reduce((s,v)=>s+Math.pow(v-avgN,2),0)/ndvis.length;
+  const growingDays=Math.round((new Date(harvest.date)-new Date(growthStart.date))/86400000);
+  const peakScore=Math.min(40,maxN*50), avgScore=Math.min(30,avgN*40);
+  const seasonScore=Math.min(20,growingDays/10);
+  const confScore=((growthStart.confidence+peakGrowth.confidence+harvest.confidence)/3)*0.1;
+  const healthScore=Math.round(peakScore+avgScore+seasonScore+confScore);
+  const coverage=maxN>=0.7?'Excellent':maxN>=0.5?'Good':maxN>=0.3?'Fair':'Poor';
+  const firstDate=sorted[0].date, lastDate=sorted[sorted.length-1].date;
+  const phases=[
+    {name:'Dormant',start:firstDate,end:growthStart.date,color:'#94a3b8',flex:1},
+    {name:'Growing',start:growthStart.date,end:peakGrowth.date,color:'#4ade80',flex:2},
+    {name:'Peak',start:peakGrowth.date,end:peakGrowth.date,color:'#22c55e',flex:0.5},
+    {name:'Declining',start:peakGrowth.date,end:harvest.date,color:'#facc15',flex:1.5},
+    {name:'Harvest',start:harvest.date,end:lastDate,color:'#f97316',flex:1}
+  ];
+  return {stages:{growthStart,peakGrowth,harvest},metrics:{cropHealthScore:healthScore,growingSeasonDays:growingDays,averageNDVI:+avgN.toFixed(3),maxNDVI:+maxN.toFixed(3),minNDVI:+minN.toFixed(3),ndviVariance:+variance.toFixed(4),vegetationCoverage:coverage},phases,timeSeries:sorted};
+}
+
+// ── API base URL ──
+const API_BASE = 'http://localhost:5000/api';
+
+// ── Authenticated fetch helper ──
+async function apiFetch(path, options={}) {
+  const token = localStorage.getItem('cc_token');
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(token ? {Authorization:`Bearer ${token}`} : {}),
+    ...(isFormData ? {} : {'Content-Type':'application/json'}),
+    ...(options.headers||{})
+  };
+  const res = await fetch(`${API_BASE}${path}`, {...options, headers});
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
+  return data;
+}
+
+// ── App state ──
+const state = {
+  page: 'auth', authMode: 'login',
+  user: null, token: null,
+  datasets: [], currentAnalysis: null,
+  currentDataset: null
+};
+
+// ── Load datasets from backend ──
+async function loadUserDatasets() {
+  try {
+    const data = await apiFetch('/data');
+    state.datasets = data.datasets || [];
+  } catch(e) { state.datasets = []; }
+}
+
+// ── Render engine ──
+const app = document.getElementById('app');
+let ndviChart = null;
+
+function setState(updates) {
+  Object.assign(state, updates);
+  if(state.user) {
+    localStorage.setItem('cc_user', JSON.stringify({user:state.user,token:state.token}));
+  }
+  render();
+}
+
+// ── Restore session on page load ──
+(async () => {
+  const token = localStorage.getItem('cc_token');
+  if(!token) { render(); return; }
+  if(token === 'demo_bypass') {
+    try {
+      const saved = localStorage.getItem('cc_user');
+      if(saved) {
+        const u = JSON.parse(saved);
+        Object.assign(state, {user:u.user, token:'demo_bypass', page:'dashboard'});
+        const demoDs = Object.keys(DEMO_DATASETS).map(k=>({
+          _id:DEMO_DATASETS[k].id, name:DEMO_DATASETS[k].name,
+          cropType:DEMO_DATASETS[k].cropType, source:'demo', uploadedAt:new Date().toISOString()
+        }));
+        state.datasets = demoDs;
+        const ts = DEMO_DATASETS.wheat_india.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+        state.currentAnalysis = analyzeCropCycle(ts);
+        state.currentDataset = {name:DEMO_DATASETS.wheat_india.name, cropType:'wheat'};
+      }
+    } catch(e){}
+    render(); return;
+  }
+  try {
+    const data = await apiFetch('/auth/me');
+    state.user = data.user;
+    state.token = token;
+    state.page = 'dashboard';
+    await loadUserDatasets();
+    if(!state.currentAnalysis && state.datasets.length === 0) {
+      const ts = DEMO_DATASETS.wheat_india.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+      state.currentAnalysis = analyzeCropCycle(ts);
+      state.currentDataset = {name:DEMO_DATASETS.wheat_india.name, cropType:'wheat'};
+    }
+  } catch(e) {
+    localStorage.removeItem('cc_token');
+    localStorage.removeItem('cc_user');
+  }
+  render();
+})();
+
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+function fmtDate(d) {
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+function fmtDateShort(d) {
+  if(!d) return '';
+  return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+}
+function cropIcon(type) {
+  return {wheat:'🌾',rice:'🌿',corn:'🌽',soybean:'🫘',cotton:'🩶',other:'🌱'}[type]||'🌱';
+}
+function healthColor(score) {
+  if(score>=75) return '#3fa83a';
+  if(score>=50) return '#d4920f';
+  return '#d44a2a';
+}
+
+function render() {
+  if(state.page==='auth') { renderAuth(); return; }
+  app.innerHTML = `
+    <div class="app">
+      ${renderSidebar()}
+      <div class="main">
+        ${renderTopbar()}
+        <div class="content fade-in">
+          ${state.page==='dashboard' ? renderDashboard()
+          : state.page==='upload' ? renderUpload()
+          : state.page==='history' ? renderHistory()
+          : state.page==='analysis' ? renderAnalysis()
+          : ''}
+        </div>
+      </div>
+    </div>`;
+  attachListeners();
+  if((state.page==='analysis'||state.page==='dashboard') && state.currentAnalysis) {
+    setTimeout(()=>{
+      drawChart(state.currentAnalysis);
+      drawRainChart(state.currentDataset?.cropType||'other');
+    }, 80);
+  }
+}
+
+function renderAuth() {
+  app.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card fade-in">
+        <div class="auth-brand">
+          <div class="auth-logo">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          </div>
+          <div class="auth-title">CropCycle</div>
+          <div class="auth-sub">${state.authMode==='login'?'Sign in to your account':'Create your account'}</div>
+        </div>
+        ${state.authError?`<div class="auth-error">${state.authError}</div>`:''}
+        ${state.authMode==='register'?`
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" id="authName" type="text" placeholder="Arjun Sharma" />
+        </div>`:''}
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="authEmail" type="email" placeholder="arjun@agri.in" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="authPass" type="password" placeholder="Min 6 characters"
+            onkeydown="if(event.key==='Enter')document.getElementById('authSubmit').click()" />
+          ${state.authMode==='register'?'<div style="font-size:11.5px;color:var(--text-ter);margin-top:5px">At least 6 characters required</div>':''}
+        </div>
+        <button class="btn btn-primary" id="authSubmit">
+          ${state.authMode==='login'?'Sign In →':'Create Account →'}
+        </button>
+        <div class="auth-switch">
+          ${state.authMode==='login'
+            ?`No account? <a id="switchMode">Create one</a>`
+            :`Already registered? <a id="switchMode">Sign in</a>`}
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+          <button class="btn btn-outline btn-sm" id="demoLogin">👁 View Demo (skip login)</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('switchMode').onclick = ()=>setState({authMode:state.authMode==='login'?'register':'login',authError:null});
+
+  // ── Demo bypass (loads demo data, no backend needed) ──
+  document.getElementById('demoLogin').onclick = ()=>{
+    const demoUser={id:'demo',name:'Demo User',email:'demo@cropcycle.in'};
+    const ts=DEMO_DATASETS.wheat_india.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+    const analysis=analyzeCropCycle(ts);
+    const ds=Object.keys(DEMO_DATASETS).map(k=>({
+      _id:DEMO_DATASETS[k].id, name:DEMO_DATASETS[k].name,
+      cropType:DEMO_DATASETS[k].cropType, source:'demo',
+      uploadedAt:new Date().toISOString()
+    }));
+    setState({user:demoUser,token:'demo_bypass',datasets:ds,currentAnalysis:analysis,
+      currentDataset:{name:DEMO_DATASETS.wheat_india.name,cropType:'wheat'},page:'dashboard',authError:null});
+    showToast('Demo loaded — running without backend 🌾');
+  };
+
+  // ── Real backend authentication ──
+  document.getElementById('authSubmit').onclick = async ()=>{
+    const btn=document.getElementById('authSubmit');
+    const email=document.getElementById('authEmail').value.trim();
+    const pass=document.getElementById('authPass').value;
+
+    // Client-side validation
+    if(!email||!pass){setState({authError:'Please fill in all fields'});return;}
+    if(!/^\S+@\S+\.\S+$/.test(email)){setState({authError:'Please enter a valid email address'});return;}
+    if(pass.length<6){setState({authError:'Password must be at least 6 characters'});return;}
+
+    if(state.authMode==='register'){
+      const name=document.getElementById('authName')?.value.trim();
+      if(!name){setState({authError:'Please enter your name'});return;}
+      if(name.length<2){setState({authError:'Name must be at least 2 characters'});return;}
+
+      btn.textContent='Creating account...'; btn.disabled=true;
+      try {
+        const res=await fetch(`${API_BASE}/auth/register`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name,email,password:pass})
+        });
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.message||'Registration failed');
+        localStorage.setItem('cc_token',data.token);
+        setState({user:data.user,token:data.token,datasets:[],page:'dashboard',authError:null});
+        showToast(`Welcome, ${data.user.name}! 🌱`);
+      } catch(err){
+        setState({authError:err.message});
+      } finally {
+        btn.textContent='Create Account →'; btn.disabled=false;
+      }
+    } else {
+      btn.textContent='Signing in...'; btn.disabled=true;
+      try {
+        const res=await fetch(`${API_BASE}/auth/login`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({email,password:pass})
+        });
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.message||'Login failed');
+        localStorage.setItem('cc_token',data.token);
+        setState({user:data.user,token:data.token,datasets:[],page:'dashboard',authError:null});
+        showToast('Welcome back! 🌱');
+        // Load user's datasets
+        loadUserDatasets(data.token);
+      } catch(err){
+        setState({authError:err.message});
+      } finally {
+        btn.textContent='Sign In →'; btn.disabled=false;
+      }
+    }
+  };
+}
+
+function renderSidebar() {
+  const pages=[
+    {id:'dashboard',label:'Dashboard',icon:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>'},
+    {id:'upload',label:'New Analysis',icon:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'},
+    {id:'history',label:'My Datasets',icon:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'},
+  ];
+  return `
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M17 8C8 10 5.9 16.17 3.82 22H5C5.5 20.5 7 17 12 15c3.71-.78 6.02-3.5 7.06-7L17 8zM5.5 6.5C4.67 5.87 4 5 4 4a4 4 0 018 0c0 1-0.67 1.87-1.5 2.5C9.5 7.87 9 9 9 10H7c0-1-0.5-2.13-1.5-3.5z"/></svg></div>
+        <div><div class="logo-text">CropCycle</div><div class="logo-sub">Analysis System</div></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Navigation</div>
+        ${pages.map(p=>`
+          <button class="nav-item ${state.page===p.id?'active':''}" data-page="${p.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${p.icon}</svg>
+            ${p.label}
+          </button>`).join('')}
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <div class="avatar">${(state.user?.name||'U')[0]}</div>
+          <div>
+            <div class="user-name">${state.user?.name||'User'}</div>
+            <div class="user-role">Researcher</div>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px" id="logoutBtn">Sign Out</button>
+      </div>
+    </aside>`;
+}
+
+function renderTopbar() {
+  const titles={dashboard:'Dashboard',upload:'New Analysis',history:'My Datasets',analysis:'Analysis Results'};
+  return `
+    <div class="topbar">
+      <span class="page-title">${titles[state.page]||'CropCycle'}</span>
+      <div class="topbar-right">
+        <span class="badge badge-green"><span class="badge-dot dot-green"></span>System Active</span>
+      </div>
+    </div>`;
+}
+
+function renderDashboard() {
+  const ds=state.datasets;
+  if(!ds.length) return `
+    <div class="empty-state">
+      <div class="empty-icon">🌱</div>
+      <p>No datasets yet. Upload data or load a demo to get started.</p>
+      <button class="btn btn-primary" style="margin-top:20px;width:auto;padding:11px 24px" data-page="upload">Start Analysis →</button>
+    </div>`;
+
+  // Show most recent analysis as featured
+  const featured = state.currentAnalysis || (() => {
+    const k=Object.keys(DEMO_DATASETS)[0];
+    return analyzeCropCycle(DEMO_DATASETS[k].timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi})));
+  })();
+  const {metrics,stages,phases} = featured;
+  const score = metrics.cropHealthScore;
+  const hc = healthColor(score);
+
+  const cropType = state.currentDataset?.cropType||'wheat';
+  const dsName = state.currentDataset?.name||Object.values(DEMO_DATASETS)[0].name;
+  const location = state.currentDataset?.location||'India';
+
+  return `
+    <div class="stack">
+      <!-- Crop banner with SVG scene -->
+      ${renderCropBanner(cropType, dsName, location)}
+
+      <!-- Metric cards -->
+      <div class="grid-4">
+        <div class="card card-sm">
+          <div class="card-title">Health Score</div>
+          <div class="metric-val" style="color:${hc}">${score}<span style="font-size:14px;font-weight:400;color:var(--text-sec)">/100</span></div>
+          <div class="metric-sub">${metrics.vegetationCoverage} vegetation</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Peak NDVI</div>
+          <div class="metric-val">${metrics.maxNDVI.toFixed(2)}</div>
+          <div class="metric-sub">on ${fmtDateShort(stages.peakGrowth.date)}</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Season Length</div>
+          <div class="metric-val">${metrics.growingSeasonDays}</div>
+          <div class="metric-sub">days growing</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Avg NDVI</div>
+          <div class="metric-val">${metrics.averageNDVI.toFixed(2)}</div>
+          <div class="metric-sub">σ² = ${metrics.ndviVariance.toFixed(4)}</div>
+        </div>
+      </div>
+
+      <!-- NDVI Chart + phases -->
+      <div class="card" style="padding-bottom:20px">
+        <div class="section-header">
+          <div>
+            <div class="section-title">NDVI Time Series</div>
+            <div class="section-sub">Normalized Difference Vegetation Index over season</div>
+          </div>
+          <span class="tag">${cropType}</span>
+        </div>
+        <div class="chart-wrap"><canvas id="ndviChart"></canvas></div>
+        <div style="margin-top:18px">
+          <div style="font-size:11px;color:var(--text-ter);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Growth Phases</div>
+          <div class="phase-bar">
+            ${phases.map(ph=>`<div class="phase-segment" style="background:${ph.color};flex:${ph.flex};" title="${ph.name}"></div>`).join('')}
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px">
+            ${phases.map(ph=>`<span style="font-size:11px;color:var(--text-sec);display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${ph.color};display:inline-block"></span>${ph.name}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Rainfall chart -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Monthly Rainfall &amp; Crop Correlation</div>
+            <div class="section-sub">Estimated rainfall (mm) with seasonal NDVI response</div>
+          </div>
+          <span class="tag">Regional avg</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:10px">
+          <span class="rain-leg-item"><span class="rain-leg-bar"></span>Rainfall (mm)</span>
+          <span class="rain-leg-item"><span class="rain-leg-line"></span>NDVI response</span>
+        </div>
+        <div class="rain-chart-wrap"><canvas id="rainChart"></canvas></div>
+      </div>
+
+      <!-- Stage cards -->
+      <div class="grid-3">
+        <div class="stage-card">
+          <div class="stage-icon start">🌱</div>
+          <div>
+            <div class="stage-label">Growth Start</div>
+            <div class="stage-date">${fmtDate(stages.growthStart.date)}</div>
+            <div class="stage-ndvi">NDVI: ${stages.growthStart.ndvi.toFixed(3)}</div>
+            <div class="stage-conf">Confidence: ${stages.growthStart.confidence}%</div>
+          </div>
+        </div>
+        <div class="stage-card">
+          <div class="stage-icon peak">🔝</div>
+          <div>
+            <div class="stage-label">Peak Growth</div>
+            <div class="stage-date">${fmtDate(stages.peakGrowth.date)}</div>
+            <div class="stage-ndvi">NDVI: ${stages.peakGrowth.ndvi.toFixed(3)}</div>
+            <div class="stage-conf">Confidence: ${stages.peakGrowth.confidence}%</div>
+          </div>
+        </div>
+        <div class="stage-card">
+          <div class="stage-icon harvest">🌾</div>
+          <div>
+            <div class="stage-label">Harvest Stage</div>
+            <div class="stage-date">${fmtDate(stages.harvest.date)}</div>
+            <div class="stage-ndvi">NDVI: ${stages.harvest.ndvi.toFixed(3)}</div>
+            <div class="stage-conf">Confidence: ${stages.harvest.confidence}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datasets quick list -->
+      ${ds.length>0?`
+      <div>
+        <div class="section-header"><div class="section-title">Recent Datasets</div><button class="btn btn-outline btn-sm" data-page="history">View All</button></div>
+        <div class="stack">
+          ${ds.slice(0,3).map(d=>`
+            <div class="history-item" data-analyze="${d._id||d.id}">
+              <div class="history-icon">${cropIcon(d.cropType)}</div>
+              <div>
+                <div class="history-name">${d.name}</div>
+                <div class="history-meta">${d.cropType} · ${d.source==='demo'?'Demo':'Uploaded'}</div>
+              </div>
+              <div class="history-score">
+                <div class="history-score-num">${healthColor(75)==='#3fa83a'?'—':'—'}</div>
+                <div class="history-score-label">View →</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`:''}
+    </div>`;
+}
+
+function renderUpload() {
+  return `
+    <div class="stack">
+      <div class="card">
+        <div class="section-title" style="margin-bottom:6px">Upload CSV Data</div>
+        <div class="section-sub" style="margin-bottom:20px">Upload a CSV file with <code>date</code> and <code>ndvi</code> columns</div>
+        <div class="upload-zone" id="dropzone">
+          <div class="upload-icon">📄</div>
+          <div class="upload-title">Drop your CSV file here</div>
+          <div class="upload-sub">or click to browse · max 5 MB · date,ndvi columns required</div>
+          <input type="file" id="fileInput" accept=".csv" style="display:none" />
+        </div>
+        <div class="grid-2" style="margin-top:14px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Dataset Name</label>
+            <input class="form-input" id="dsName" placeholder="My Wheat Dataset" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Crop Type</label>
+            <select class="form-input" id="cropType">
+              <option value="wheat">Wheat</option>
+              <option value="rice">Rice</option>
+              <option value="corn">Corn</option>
+              <option value="soybean">Soybean</option>
+              <option value="cotton">Cotton</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px;width:auto;padding:10px 28px" id="uploadBtn">Analyze →</button>
+      </div>
+
+      <div class="card">
+        <div class="section-title" style="margin-bottom:6px">Or Load a Demo Dataset</div>
+        <div class="section-sub" style="margin-bottom:16px">Explore pre-loaded Indian crop data</div>
+        <div class="demo-grid">
+          ${Object.entries(DEMO_DATASETS).map(([k,d])=>`
+            <div class="demo-card" data-demo="${k}">
+              <div class="demo-crop">${d.icon}</div>
+              <div class="demo-name">${d.name}</div>
+              <div class="demo-loc">📍 ${d.location}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" style="margin-bottom:8px">CSV Format Reference</div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;font-family:monospace;font-size:13px;color:var(--text-sec);line-height:1.8">
+          date,ndvi<br>
+          2023-11-01,0.12<br>
+          2023-12-01,0.31<br>
+          2024-01-15,0.55<br>
+          2024-03-15,0.85<br>
+          2024-05-01,0.35
+        </div>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--text-ter)">
+          Dates: ISO format (YYYY-MM-DD) · NDVI: float between -1 and 1 · Minimum 5 rows required
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderHistory() {
+  const ds=state.datasets;
+  if(!ds.length) return `<div class="empty-state"><div class="empty-icon">📂</div><p>No datasets yet. <span style="color:var(--green-600);cursor:pointer" data-page="upload">Upload data</span> to get started.</p></div>`;
+  return `
+    <div class="stack">
+      ${ds.map(d=>`
+        <div class="history-item" data-analyze="${d._id||d.id}">
+          <div class="history-icon">${cropIcon(d.cropType)}</div>
+          <div style="flex:1">
+            <div class="history-name">${d.name}</div>
+            <div class="history-meta">${d.cropType} · ${d.source==='demo'?'Demo dataset':'CSV upload'} · ${fmtDate(d.uploadedAt)}</div>
+          </div>
+          <button class="btn btn-outline btn-sm" data-analyze="${d._id||d.id}">Analyze →</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderAnalysis() {
+  if(!state.currentAnalysis) return `<div class="loading"><div class="spin"></div>Loading analysis...</div>`;
+  const {metrics,stages,phases,timeSeries} = state.currentAnalysis;
+  const score=metrics.cropHealthScore, hc=healthColor(score);
+  const circ = 2*Math.PI*44;
+  const dash = circ*(1-score/100);
+  const cropType = state.currentDataset?.cropType||'wheat';
+  const dsName   = state.currentDataset?.name||'Dataset';
+  const location = state.currentDataset?.location||'India';
+
+  return `
+    <div class="stack">
+      <!-- Crop identity banner -->
+      ${renderCropBanner(cropType, dsName, location)}
+
+      <!-- Top row -->
+      <div class="grid-2">
+        <!-- Health gauge -->
+        <div class="card" style="display:flex;align-items:center;gap:24px">
+          <div class="health-ring-wrap">
+            <div class="health-ring">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" fill="none" stroke="var(--surface2)" stroke-width="9"/>
+                <circle cx="50" cy="50" r="44" fill="none" stroke="${hc}" stroke-width="9"
+                  stroke-dasharray="${circ}" stroke-dashoffset="${dash}" stroke-linecap="round"
+                  style="transition:stroke-dashoffset 1s ease"/>
+              </svg>
+              <div class="health-ring-label">
+                <div class="health-score-num" style="color:${hc}">${score}</div>
+                <div class="health-score-sub">Score</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:13px;font-weight:500;color:var(--text-sec)">${metrics.vegetationCoverage} Health</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Season Metrics</div>
+            ${[
+              ['Peak NDVI', metrics.maxNDVI.toFixed(3)],
+              ['Avg NDVI', metrics.averageNDVI.toFixed(3)],
+              ['Season Days', metrics.growingSeasonDays+'d'],
+              ['Variance', metrics.ndviVariance.toFixed(4)]
+            ].map(([l,v])=>`
+              <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:12.5px;color:var(--text-sec)">${l}</span>
+                <span style="font-size:12.5px;font-weight:500;color:var(--text)">${v}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+        <!-- Stage summary -->
+        <div class="card">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Detected Stages</div>
+          <div class="stack">
+            ${[
+              {label:'Growth Start',icon:'🌱',cls:'start',s:stages.growthStart,col:'var(--green-600)'},
+              {label:'Peak Growth',icon:'🔝',cls:'peak',s:stages.peakGrowth,col:'var(--blue-400)'},
+              {label:'Harvest Stage',icon:'🌾',cls:'harvest',s:stages.harvest,col:'var(--amber-400)'}
+            ].map(({label,icon,cls,s,col})=>`
+              <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface2);border-radius:9px">
+                <span style="font-size:20px">${icon}</span>
+                <div style="flex:1">
+                  <div style="font-size:11px;color:var(--text-ter);text-transform:uppercase;letter-spacing:0.5px">${label}</div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text)">${fmtDate(s.date)}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:13px;font-weight:500;color:${col}">NDVI ${s.ndvi.toFixed(3)}</div>
+                  <div style="font-size:11px;color:var(--text-ter)">${s.confidence}% conf.</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- NDVI Chart -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">NDVI Time Series Analysis</div>
+            <div class="section-sub">${timeSeries?.length||0} data points · ${fmtDate(timeSeries?.[0]?.date)} → ${fmtDate(timeSeries?.[timeSeries?.length-1]?.date)}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span class="badge badge-green"><span class="badge-dot dot-green"></span>Growing</span>
+            <span class="badge badge-amber"><span class="badge-dot dot-amber"></span>Declining</span>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="ndviChart"></canvas></div>
+        <!-- Phase bar -->
+        <div style="margin-top:18px">
+          <div style="font-size:11px;color:var(--text-ter);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Crop Cycle Phases</div>
+          <div class="phase-bar">
+            ${phases.map(ph=>`<div class="phase-segment" style="background:${ph.color};flex:${ph.flex};" title="${ph.name}: ${fmtDateShort(ph.start)} → ${fmtDateShort(ph.end)}"></div>`).join('')}
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px">
+            ${phases.map(ph=>`<span style="font-size:11.5px;color:var(--text-sec);display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:${ph.color};display:inline-block"></span>${ph.name}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Confidence bars -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:16px">Detection Confidence</div>
+        <div class="stack">
+          ${[
+            {label:'Growth Start detection',val:stages.growthStart.confidence,col:'#3fa83a'},
+            {label:'Peak growth detection',val:stages.peakGrowth.confidence,col:'#2f7fd4'},
+            {label:'Harvest stage detection',val:stages.harvest.confidence,col:'#d4920f'}
+          ].map(({label,val,col})=>`
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:13px;color:var(--text-sec)">${label}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--text)">${val}%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${val}%;background:${col}"></div></div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Rainfall chart on analysis page too -->
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Monthly Rainfall &amp; Crop Correlation</div>
+            <div class="section-sub">Regional rainfall (mm) with NDVI seasonal response</div>
+          </div>
+          <span class="tag">Regional avg</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:10px">
+          <span class="rain-leg-item"><span class="rain-leg-bar"></span>Rainfall (mm)</span>
+          <span class="rain-leg-item"><span class="rain-leg-line"></span>NDVI response</span>
+        </div>
+        <div class="rain-chart-wrap"><canvas id="rainChart"></canvas></div>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-outline" data-page="upload">New Analysis</button>
+        <button class="btn btn-outline" data-page="history">All Datasets</button>
+        <button class="btn btn-primary" style="width:auto;padding:10px 22px" id="exportBtn">Export Report</button>
+      </div>
+    </div>`;
+}
+
+// ── SVG crop scene generator ──
+function renderCropScene(cropType) {
+  const scenes = {
+    wheat: `
+      <rect width="280" height="180" fill="#c8e6c0"/>
+      <rect y="120" width="280" height="60" fill="#8B6914" opacity=".3"/>
+      <circle cx="245" cy="30" r="18" fill="#f5c842" opacity=".85"/>
+      <ellipse cx="60" cy="22" rx="24" ry="11" fill="white" opacity=".65"/>
+      <ellipse cx="75" cy="17" rx="17" ry="12" fill="white" opacity=".65"/>
+      <rect x="14" y="75" width="7" height="48" fill="#7a5c2e"/>
+      <ellipse cx="17" cy="62" rx="18" ry="20" fill="#2d7a2a"/>
+      <ellipse cx="9" cy="71" rx="11" ry="14" fill="#3a9636"/>
+      <ellipse cx="25" cy="69" rx="12" ry="16" fill="#3a9636"/>
+      <rect x="250" y="78" width="6" height="44" fill="#7a5c2e"/>
+      <ellipse cx="253" cy="65" rx="16" ry="18" fill="#2d7a2a"/>
+      <ellipse cx="244" cy="73" rx="11" ry="13" fill="#3a9636"/>
+      <g stroke="#7dc435" stroke-linecap="round">
+        <line x1="40" y1="122" x2="37" y2="85" stroke-width="1.8"/><ellipse cx="37" cy="82" rx="4" ry="8" fill="#d4c000" transform="rotate(-5,37,82)"/>
+        <line x1="52" y1="122" x2="55" y2="84" stroke-width="1.8"/><ellipse cx="55" cy="81" rx="4" ry="8" fill="#c8b400" transform="rotate(6,55,81)"/>
+        <line x1="64" y1="122" x2="61" y2="86" stroke-width="1.8"/><ellipse cx="61" cy="83" rx="3.5" ry="7" fill="#d4c000" transform="rotate(-4,61,83)"/>
+        <line x1="78" y1="122" x2="81" y2="83" stroke-width="1.8"/><ellipse cx="81" cy="80" rx="4" ry="8" fill="#c8b400" transform="rotate(7,81,80)"/>
+        <line x1="92" y1="122" x2="89" y2="85" stroke-width="1.8"/><ellipse cx="89" cy="82" rx="3.5" ry="7" fill="#bfa800" transform="rotate(-5,89,82)"/>
+        <line x1="106" y1="122" x2="109" y2="84" stroke-width="1.8"/><ellipse cx="109" cy="81" rx="4" ry="8" fill="#d4c000" transform="rotate(6,109,81)"/>
+        <line x1="120" y1="122" x2="117" y2="86" stroke-width="1.8"/><ellipse cx="117" cy="83" rx="3.5" ry="7" fill="#c8b400" transform="rotate(-4,117,83)"/>
+        <line x1="134" y1="122" x2="137" y2="83" stroke-width="1.8"/><ellipse cx="137" cy="80" rx="4" ry="8" fill="#d4c000" transform="rotate(8,137,80)"/>
+        <line x1="148" y1="122" x2="145" y2="85" stroke-width="1.8"/><ellipse cx="145" cy="82" rx="3.5" ry="7" fill="#bfa800" transform="rotate(-5,145,82)"/>
+        <line x1="162" y1="122" x2="165" y2="84" stroke-width="1.8"/><ellipse cx="165" cy="81" rx="4" ry="8" fill="#c8b400" transform="rotate(6,165,81)"/>
+        <line x1="176" y1="122" x2="173" y2="86" stroke-width="1.8"/><ellipse cx="173" cy="83" rx="3.5" ry="7" fill="#d4c000" transform="rotate(-4,173,83)"/>
+        <line x1="190" y1="122" x2="193" y2="83" stroke-width="1.8"/><ellipse cx="193" cy="80" rx="4" ry="8" fill="#c8b400" transform="rotate(7,193,80)"/>
+        <line x1="204" y1="122" x2="201" y2="85" stroke-width="1.8"/><ellipse cx="201" cy="82" rx="3.5" ry="7" fill="#bfa800" transform="rotate(-5,201,82)"/>
+        <line x1="218" y1="122" x2="221" y2="84" stroke-width="1.8"/><ellipse cx="221" cy="81" rx="4" ry="8" fill="#d4c000" transform="rotate(6,221,81)"/>
+        <line x1="232" y1="122" x2="229" y2="86" stroke-width="1.8"/><ellipse cx="229" cy="83" rx="3.5" ry="7" fill="#c8b400" transform="rotate(-4,229,83)"/>
+      </g>
+      <path d="M95 42 Q99 37 103 42" stroke="#555" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+      <path d="M112 35 Q116 30 120 35" stroke="#555" stroke-width="1.3" fill="none" stroke-linecap="round"/>`,
+
+    rice: `
+      <rect width="280" height="180" fill="#b2dfdb"/>
+      <rect y="105" width="280" height="75" fill="#5c8a6e" opacity=".45"/>
+      <rect y="118" width="280" height="62" fill="#4a7560" opacity=".35"/>
+      <circle cx="245" cy="28" r="16" fill="#f5c842" opacity=".8"/>
+      <ellipse cx="60" cy="20" rx="26" ry="12" fill="white" opacity=".6"/>
+      <ellipse cx="80" cy="15" rx="18" ry="13" fill="white" opacity=".6"/>
+      <rect x="8" y="68" width="6" height="55" fill="#6d4c41"/>
+      <ellipse cx="11" cy="55" rx="15" ry="17" fill="#388e3c"/>
+      <ellipse cx="4" cy="63" rx="9" ry="12" fill="#43a047"/>
+      <rect x="258" y="72" width="6" height="50" fill="#6d4c41"/>
+      <ellipse cx="261" cy="59" rx="14" ry="16" fill="#388e3c"/>
+      <ellipse cx="270" cy="67" rx="9" ry="12" fill="#43a047"/>
+      <g stroke="#66bb6a" stroke-linecap="round" fill="none">
+        <line x1="40" y1="118" x2="38" y2="88" stroke-width="2"/><line x1="38" y1="100" x2="32" y2="93" stroke-width="1.5"/><line x1="38" y1="94" x2="44" y2="88" stroke-width="1.5"/>
+        <line x1="55" y1="118" x2="57" y2="87" stroke-width="2"/><line x1="57" y1="99" x2="63" y2="92" stroke-width="1.5"/>
+        <line x1="70" y1="118" x2="68" y2="88" stroke-width="2"/><line x1="68" y1="100" x2="62" y2="93" stroke-width="1.5"/>
+        <line x1="85" y1="118" x2="87" y2="87" stroke-width="2"/><line x1="87" y1="99" x2="93" y2="92" stroke-width="1.5"/><line x1="87" y1="93" x2="81" y2="87" stroke-width="1.5"/>
+        <line x1="100" y1="118" x2="98" y2="88" stroke-width="2"/><line x1="98" y1="100" x2="92" y2="93" stroke-width="1.5"/>
+        <line x1="115" y1="118" x2="117" y2="87" stroke-width="2"/><line x1="117" y1="99" x2="123" y2="92" stroke-width="1.5"/>
+        <line x1="130" y1="118" x2="128" y2="88" stroke-width="2"/><line x1="128" y1="100" x2="122" y2="93" stroke-width="1.5"/><line x1="128" y1="93" x2="134" y2="87" stroke-width="1.5"/>
+        <line x1="145" y1="118" x2="147" y2="87" stroke-width="2"/><line x1="147" y1="99" x2="153" y2="92" stroke-width="1.5"/>
+        <line x1="160" y1="118" x2="158" y2="88" stroke-width="2"/><line x1="158" y1="100" x2="152" y2="93" stroke-width="1.5"/>
+        <line x1="175" y1="118" x2="177" y2="87" stroke-width="2"/><line x1="177" y1="99" x2="183" y2="92" stroke-width="1.5"/><line x1="177" y1="93" x2="171" y2="87" stroke-width="1.5"/>
+        <line x1="190" y1="118" x2="188" y2="88" stroke-width="2"/>
+        <line x1="205" y1="118" x2="207" y2="87" stroke-width="2"/><line x1="207" y1="99" x2="213" y2="92" stroke-width="1.5"/>
+        <line x1="220" y1="118" x2="218" y2="88" stroke-width="2"/><line x1="218" y1="100" x2="212" y2="93" stroke-width="1.5"/>
+        <line x1="235" y1="118" x2="237" y2="87" stroke-width="2"/>
+      </g>
+      <rect x="0" y="135" width="280" height="8" fill="#80cbc4" opacity=".4"/>
+      <rect x="0" y="148" width="280" height="6" fill="#80cbc4" opacity=".35"/>`,
+
+    corn: `
+      <rect width="280" height="180" fill="#dcedc8"/>
+      <rect y="115" width="280" height="65" fill="#795548" opacity=".25"/>
+      <circle cx="248" cy="28" r="17" fill="#f5c842" opacity=".85"/>
+      <ellipse cx="55" cy="20" rx="22" ry="11" fill="white" opacity=".65"/>
+      <ellipse cx="70" cy="15" rx="16" ry="12" fill="white" opacity=".65"/>
+      <rect x="8" y="68" width="7" height="50" fill="#6d4c41"/>
+      <ellipse cx="11" cy="54" rx="16" ry="18" fill="#2e7d32"/>
+      <rect x="252" y="72" width="6" height="46" fill="#6d4c41"/>
+      <ellipse cx="255" cy="58" rx="15" ry="17" fill="#2e7d32"/>
+      <g fill="none" stroke-linecap="round">
+        <line x1="40" y1="118" x2="40" y2="62" stroke="#558b2f" stroke-width="3"/>
+        <path d="M40 80 Q55 72 60 63" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M40 92 Q25 84 20 75" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="36" y="74" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="72" y1="118" x2="72" y2="60" stroke="#558b2f" stroke-width="3"/>
+        <path d="M72 78 Q87 70 92 61" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M72 90 Q57 82 52 73" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="68" y="72" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="104" y1="118" x2="104" y2="58" stroke="#558b2f" stroke-width="3"/>
+        <path d="M104 76 Q119 68 124 59" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M104 88 Q89 80 84 71" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="100" y="70" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="136" y1="118" x2="136" y2="60" stroke="#558b2f" stroke-width="3"/>
+        <path d="M136 78 Q151 70 156 61" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M136 90 Q121 82 116 73" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="132" y="72" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="168" y1="118" x2="168" y2="62" stroke="#558b2f" stroke-width="3"/>
+        <path d="M168 80 Q183 72 188 63" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M168 92 Q153 84 148 75" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="164" y="74" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="200" y1="118" x2="200" y2="60" stroke="#558b2f" stroke-width="3"/>
+        <path d="M200 78 Q215 70 220 61" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M200 90 Q185 82 180 73" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="196" y="72" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+
+        <line x1="232" y1="118" x2="232" y2="62" stroke="#558b2f" stroke-width="3"/>
+        <path d="M232 80 Q247 72 252 63" stroke="#7cb342" stroke-width="1.8"/>
+        <path d="M232 92 Q217 84 212 75" stroke="#7cb342" stroke-width="1.8"/>
+        <rect x="228" y="74" width="8" height="16" rx="3" fill="#fdd835" stroke="#f9a825" stroke-width="1"/>
+      </g>`
+  };
+  return scenes[cropType] || scenes.wheat;
+}
+
+// ── Render crop info banner ──
+function renderCropBanner(cropType, datasetName, location) {
+  const info = CROP_INFO[cropType] || CROP_INFO.other;
+  const icon = {wheat:'🌾',rice:'🌿',corn:'🌽',soybean:'🫘',other:'🌱'}[cropType]||'🌱';
+  return `
+    <div class="crop-banner">
+      <div class="crop-info-left">
+        <div class="crop-header">
+          <div class="crop-icon-box">${icon}</div>
+          <div>
+            <div class="crop-name">${datasetName||cropType.charAt(0).toUpperCase()+cropType.slice(1)}</div>
+            <div class="crop-sci">${info.sciName}</div>
+            <div class="crop-location">📍 ${location||'India'} · ${info.season}</div>
+          </div>
+        </div>
+        <div class="crop-desc">${info.description}</div>
+        <div class="crop-facts">
+          <div class="fact-item"><div class="fact-key">Sowing window</div><div class="fact-val">${info.sowingWindow}</div></div>
+          <div class="fact-item"><div class="fact-key">Harvest window</div><div class="fact-val">${info.harvestWindow}</div></div>
+          <div class="fact-item"><div class="fact-key">Optimal NDVI</div><div class="fact-val">${info.optimalNDVI}</div></div>
+          <div class="fact-item"><div class="fact-key">Season length</div><div class="fact-val">${info.seasonLength}</div></div>
+          <div class="fact-item"><div class="fact-key">Water need</div><div class="fact-val">${info.waterNeed}</div></div>
+          <div class="fact-item"><div class="fact-key">Critical stages</div><div class="fact-val">${info.criticalStages}</div></div>
+        </div>
+      </div>
+      <div class="crop-scene">
+        <svg viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="min-height:180px">
+          ${renderCropScene(cropType)}
+        </svg>
+      </div>
+    </div>`;
+}
+
+// ── Rainfall chart drawer ──
+let rainChart = null;
+function drawRainChart(cropType) {
+  const canvas = document.getElementById('rainChart');
+  if(!canvas) return;
+  if(rainChart) { rainChart.destroy(); rainChart=null; }
+  const info = CROP_INFO[cropType] || CROP_INFO.other;
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const tc = isDark ? '#6e6458' : '#9c9080';
+  const gc = isDark ? 'rgba(255,240,180,.07)' : 'rgba(100,90,60,.07)';
+
+  // Build normalised NDVI overlay to match rainfall months count
+  const rlen = info.rainfall.length;
+  const ndviStep = 1 / (rlen - 1);
+  const ndviCurve = Array.from({length:rlen},(_,i) => {
+    const t = i * ndviStep;
+    // Bell-curve approximation centred at 60% of season
+    return +Math.max(0.08, Math.sin(t * Math.PI * 0.9 + 0.1) * 0.78 + 0.1).toFixed(2);
+  });
+
+  rainChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: info.rainfallMonths,
+      datasets: [
+        {
+          label: 'Rainfall (mm)',
+          data: info.rainfall,
+          backgroundColor: 'rgba(47,127,212,.2)',
+          borderColor: '#2f7fd4',
+          borderWidth: 1.5,
+          borderRadius: 5,
+          yAxisID: 'yR',
+          order: 2
+        },
+        {
+          label: 'NDVI',
+          data: ndviCurve,
+          type: 'line',
+          borderColor: '#3fa83a',
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#3fa83a',
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+          tension: 0.4,
+          yAxisID: 'yN',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isDark ? '#1e1c19' : '#1a1710',
+          titleColor: '#f0ece4', bodyColor: '#a09888',
+          cornerRadius: 8, padding: 9,
+          mode: 'index', intersect: false
+        }
+      },
+      scales: {
+        x: { grid:{color:gc}, ticks:{color:tc,font:{size:11}} },
+        yR: { position:'left', title:{display:true,text:'Rainfall (mm)',color:tc,font:{size:10}}, grid:{color:gc}, ticks:{color:tc,font:{size:10.5}}, min:0 },
+        yN: { position:'right', title:{display:true,text:'NDVI',color:tc,font:{size:10}}, grid:{display:false}, ticks:{color:tc,font:{size:10.5},callback:v=>v.toFixed(1)}, min:0, max:1 }
+      },
+      animation: { duration: 700, easing: 'easeInOutQuart' }
+    }
+  });
+}
+
+function drawChart(analysis) {
+  const canvas = document.getElementById('ndviChart');
+  if(!canvas) return;
+  if(ndviChart) { ndviChart.destroy(); ndviChart=null; }
+
+  const {timeSeries,stages,phases}=analysis;
+  if(!timeSeries||!timeSeries.length) return;
+
+  const labels=timeSeries.map(p=>fmtDateShort(p.date));
+  const data=timeSeries.map(p=>+p.ndvi.toFixed(3));
+
+  // Find x-index of each stage label
+  const gsLabel=fmtDateShort(stages.growthStart.date);
+  const pgLabel=fmtDateShort(stages.peakGrowth.date);
+  const hvLabel=fmtDateShort(stages.harvest.date);
+  const gsIdx=labels.indexOf(gsLabel);
+  const pgIdx=labels.indexOf(pgLabel);
+  const hvIdx=labels.indexOf(hvLabel);
+
+  // Custom plugin: draws vertical dashed lines + labels INSIDE the chart area
+  const stageLinesPlugin = {
+    id: 'stageLines',
+    afterDraw(chart) {
+      const ctx = chart.ctx;
+      const {chartArea: {top, bottom, left, right}, scales} = chart;
+      const xScale = scales.x;
+
+      const stageMarkers = [
+        {idx: gsIdx, label: 'Start',   color: '#3fa83a'},
+        {idx: pgIdx, label: 'Peak',    color: '#2f7fd4'},
+        {idx: hvIdx, label: 'Harvest', color: '#d4920f'},
+      ];
+
+      stageMarkers.forEach(({idx, label, color}) => {
+        if(idx < 0) return;
+        const x = xScale.getPixelForIndex(idx);
+
+        // Dashed vertical line
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Label badge drawn INSIDE chart near the top (never clips)
+        const labelY = top + 14;   // 14px below the chart top edge — always inside
+        const padding = 5;
+        ctx.font = '600 10px "DM Sans", system-ui, sans-serif';
+        const textW = ctx.measureText(label).width;
+        const boxW = textW + padding * 2;
+        const boxH = 16;
+        const boxX = x - boxW / 2;
+        const boxY = labelY - boxH + 2;
+
+        // Badge background (manual rounded rect — roundRect not in all browsers)
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        const r = 3;
+        ctx.moveTo(boxX + r, boxY);
+        ctx.lineTo(boxX + boxW - r, boxY);
+        ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+        ctx.lineTo(boxX + boxW, boxY + boxH - r);
+        ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+        ctx.lineTo(boxX + r, boxY + boxH);
+        ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+        ctx.lineTo(boxX, boxY + r);
+        ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Badge text
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, labelY - boxH / 2 + 2);
+        ctx.restore();
+      });
+    }
+  };
+
+  ndviChart = new Chart(canvas, {
+    type:'line',
+    plugins:[stageLinesPlugin],
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'NDVI',
+          data,
+          borderColor:'#3fa83a',
+          backgroundColor:'rgba(63,168,58,0.08)',
+          borderWidth:2.5,
+          pointRadius:5,
+          pointBackgroundColor:data.map((v,i)=>{
+            const d=new Date(timeSeries[i].date);
+            if(d.toDateString()===new Date(stages.peakGrowth.date).toDateString()) return '#2f7fd4';
+            if(d.toDateString()===new Date(stages.growthStart.date).toDateString()) return '#3fa83a';
+            if(d.toDateString()===new Date(stages.harvest.date).toDateString()) return '#d4920f';
+            return '#3fa83a';
+          }),
+          pointBorderColor:'white',
+          pointBorderWidth:2,
+          pointHoverRadius:7,
+          tension:0.4,
+          fill:true
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{
+        padding:{ top: 8 }   // chart area has its own top padding — labels live inside it
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e1c19',
+          titleColor:'#f0ece4',
+          bodyColor:'#a09888',
+          borderColor:'rgba(255,240,200,0.1)',
+          borderWidth:1,
+          cornerRadius:8,
+          padding:10,
+          callbacks:{
+            label:ctx=>`NDVI: ${ctx.parsed.y.toFixed(3)}`
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(128,120,100,0.08)'},
+          ticks:{color:'#9c9080',font:{size:11},maxRotation:45}
+        },
+        y:{
+          min:0,max:1,
+          grid:{color:'rgba(128,120,100,0.08)'},
+          ticks:{color:'#9c9080',font:{size:11},callback:v=>v.toFixed(1)}
+        }
+      },
+      animation:{duration:800,easing:'easeInOutQuart'}
+    }
+  });
+}
+
+function parseCSV(text) {
+  const lines=text.trim().split('\n');
+  const header=lines[0].toLowerCase().split(',').map(h=>h.trim());
+  const dateIdx=header.findIndex(h=>h.includes('date'));
+  const ndviIdx=header.findIndex(h=>h.includes('ndvi')||h.includes('value'));
+  if(dateIdx<0||ndviIdx<0) throw new Error('CSV must have date and ndvi columns');
+  return lines.slice(1).map((l,i)=>{
+    const cols=l.split(',');
+    const date=new Date(cols[dateIdx]?.trim());
+    const ndvi=parseFloat(cols[ndviIdx]?.trim());
+    if(isNaN(date.getTime())) throw new Error(`Bad date at row ${i+2}`);
+    if(isNaN(ndvi)) throw new Error(`Bad NDVI at row ${i+2}`);
+    return {date,ndvi};
+  });
+}
+
+// ── Load demo locally (no backend call needed) ──
+async function loadDemo(key) {
+  const d=DEMO_DATASETS[key]; if(!d) return;
+  const ts=d.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+  const analysis=analyzeCropCycle(ts);
+  const newDs={_id:d.id,name:d.name,cropType:d.cropType,source:'demo',uploadedAt:new Date().toISOString()};
+
+  // If connected to backend, save it there too
+  if(state.token && state.token!=='demo_bypass') {
+    try {
+      const res=await apiFetch('/data/demo',{method:'POST',body:JSON.stringify({demoKey:key})});
+      const savedDs=res.cropData;
+      const existing=state.datasets.find(x=>x._id===savedDs._id);
+      state.datasets=existing?state.datasets:[...state.datasets,savedDs];
+    } catch(e) {
+      const existing=state.datasets.find(x=>x._id===d.id);
+      state.datasets=existing?state.datasets:[...state.datasets,newDs];
+    }
+  } else {
+    const existing=state.datasets.find(x=>x._id===d.id);
+    state.datasets=existing?state.datasets:[...state.datasets,newDs];
+  }
+  setState({currentAnalysis:analysis,currentDataset:newDs,page:'analysis'});
+  showToast(`Loaded: ${d.name}`);
+}
+
+function attachListeners() {
+  // Nav
+  document.querySelectorAll('[data-page]').forEach(el=>{
+    el.onclick=()=>setState({page:el.dataset.page});
+  });
+  // Logout — clear both token keys
+  const logout=document.getElementById('logoutBtn');
+  if(logout) logout.onclick=()=>{
+    localStorage.removeItem('cc_token');
+    localStorage.removeItem('cc_user');
+    setState({user:null,token:null,datasets:[],page:'auth',currentAnalysis:null,currentDataset:null});
+  };
+  // Demo cards
+  document.querySelectorAll('[data-demo]').forEach(el=>{
+    el.onclick=()=>loadDemo(el.dataset.demo);
+  });
+  // Analyze from history/dashboard
+  document.querySelectorAll('[data-analyze]').forEach(el=>{
+    el.onclick=async ()=>{
+      const id=el.dataset.analyze;
+      // Check if it's a demo dataset first
+      const demoKey=Object.keys(DEMO_DATASETS).find(k=>DEMO_DATASETS[k].id===id);
+      if(demoKey) { loadDemo(demoKey); return; }
+      // Otherwise fetch from backend
+      try {
+        const data=await apiFetch(`/data/${id}`);
+        const ts=data.cropData.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+        const analysis=analyzeCropCycle(ts);
+        setState({currentAnalysis:analysis,currentDataset:data.cropData,page:'analysis'});
+      } catch(e) { showToast('Could not load dataset','error'); }
+    };
+  });
+  // Upload zone
+  const dz=document.getElementById('dropzone');
+  const fi=document.getElementById('fileInput');
+  if(dz&&fi) {
+    dz.onclick=()=>fi.click();
+    dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag');};
+    dz.ondragleave=()=>dz.classList.remove('drag');
+    dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);};
+    fi.onchange=()=>{if(fi.files[0])handleFile(fi.files[0]);};
+  }
+  const uploadBtn=document.getElementById('uploadBtn');
+  if(uploadBtn) uploadBtn.onclick=()=>{
+    if(!window._pendingFile){showToast('Please select a CSV file first','error');return;}
+    handleFile(window._pendingFile,true);
+  };
+  // Export
+  const exp=document.getElementById('exportBtn');
+  if(exp) exp.onclick=()=>{
+    const a=state.currentAnalysis; if(!a) return;
+    const {stages,metrics}=a;
+    const txt=[
+      'CROP CYCLE ANALYSIS REPORT','============================',
+      `Dataset: ${state.currentDataset?.name||'Unknown'}`,
+      `Health Score: ${metrics.cropHealthScore}/100`,
+      `Vegetation: ${metrics.vegetationCoverage}`,
+      '','DETECTED STAGES',
+      `Growth Start: ${fmtDate(stages.growthStart.date)} (NDVI ${stages.growthStart.ndvi.toFixed(3)}, ${stages.growthStart.confidence}% conf)`,
+      `Peak Growth:  ${fmtDate(stages.peakGrowth.date)} (NDVI ${stages.peakGrowth.ndvi.toFixed(3)}, ${stages.peakGrowth.confidence}% conf)`,
+      `Harvest:      ${fmtDate(stages.harvest.date)} (NDVI ${stages.harvest.ndvi.toFixed(3)}, ${stages.harvest.confidence}% conf)`,
+      '','METRICS',
+      `Season Days: ${metrics.growingSeasonDays}  |  Max: ${metrics.maxNDVI}  |  Avg: ${metrics.averageNDVI}  |  Variance: ${metrics.ndviVariance}`,
+      '','Generated: '+new Date().toLocaleString(),'CropCycle Analysis System'
+    ].join('\n');
+    const blob=new Blob([txt],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a2=document.createElement('a');a2.href=url;a2.download='crop_analysis_report.txt';a2.click();
+    showToast('Report exported!');
+  };
+}
+
+// ── CSV upload — sends to backend if logged in, client-only if demo ──
+async function handleFile(file, auto=false) {
+  window._pendingFile=file;
+  const dz=document.getElementById('dropzone');
+  if(dz) {
+    dz.querySelector('.upload-title').textContent=file.name;
+    dz.querySelector('.upload-sub').textContent=`${(file.size/1024).toFixed(1)} KB · Ready to analyze`;
+  }
+  if(!auto) return;
+
+  const name=document.getElementById('dsName')?.value||file.name.replace('.csv','');
+  const cropType=document.getElementById('cropType')?.value||'other';
+
+  // Client-side parse and validate first
+  let ts;
+  try {
+    const text=await file.text();
+    ts=parseCSV(text);
+    if(ts.length<5) throw new Error('Need at least 5 data points');
+  } catch(err) { showToast(err.message,'error'); return; }
+
+  const btn=document.getElementById('uploadBtn');
+  if(btn){btn.textContent='Analyzing...';btn.disabled=true;}
+
+  // If demo bypass or no backend — run purely client-side
+  if(!state.token||state.token==='demo_bypass') {
+    const analysis=analyzeCropCycle(ts);
+    const ds={_id:Date.now()+'',name,cropType,source:'upload',uploadedAt:new Date().toISOString()};
+    setState({currentAnalysis:analysis,currentDataset:ds,datasets:[...state.datasets,ds],page:'analysis'});
+    showToast('Analysis complete! 🌱');
+    if(btn){btn.textContent='Analyze →';btn.disabled=false;}
+    return;
+  }
+
+  // Send to backend
+  try {
+    const formData=new FormData();
+    formData.append('file',file);
+    formData.append('name',name);
+    formData.append('cropType',cropType);
+    const token=localStorage.getItem('cc_token');
+    const res=await fetch(`${API_BASE}/data/upload`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`},
+      body:formData
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.message||'Upload failed');
+    const savedTs=data.cropData.timeSeries.map(p=>({date:new Date(p.date),ndvi:p.ndvi}));
+    const analysis=analyzeCropCycle(savedTs);
+    const ds={...data.cropData,source:'upload'};
+    setState({currentAnalysis:analysis,currentDataset:ds,datasets:[...state.datasets,ds],page:'analysis'});
+    showToast('Analysis complete! 🌱');
+  } catch(err) {
+    // Fallback to client-side if backend unreachable
+    const analysis=analyzeCropCycle(ts);
+    const ds={_id:Date.now()+'',name,cropType,source:'upload',uploadedAt:new Date().toISOString()};
+    setState({currentAnalysis:analysis,currentDataset:ds,datasets:[...state.datasets,ds],page:'analysis'});
+    showToast('Analyzed locally (backend not connected)');
+  } finally {
+    if(btn){btn.textContent='Analyze →';btn.disabled=false;}
+  }
+}
+</script>
+</body>
+</html>

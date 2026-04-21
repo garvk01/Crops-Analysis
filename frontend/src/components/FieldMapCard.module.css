@@ -1,0 +1,45 @@
+.wrap {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.mapContainer {
+  width: 100%;
+  background: var(--surface3);
+}
+
+/* Override Leaflet's light theme for dark mode consistency */
+.mapContainer :global(.leaflet-container) {
+  background: #1a2620;
+  font-family: inherit;
+}
+.mapContainer :global(.leaflet-popup-content-wrapper) {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.mapContainer :global(.leaflet-popup-tip) {
+  background: var(--surface2);
+}
+.mapContainer :global(.leaflet-control-zoom a) {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.coordBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.coordIcon   { font-size: 13px; }
+.coordLabel  { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
+.coordValues { font-size: 11px; color: var(--text-ter); font-family: monospace; }
+.coordMissing { font-size: 11px; color: var(--text-ter); font-style: italic; }

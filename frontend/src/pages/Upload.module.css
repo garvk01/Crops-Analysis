@@ -1,0 +1,81 @@
+.page  { display: flex; flex-direction: column; gap: 14px; }
+.card  { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; }
+.cardTitle { font-size: 13.5px; font-weight: 500; margin-bottom: 4px; color: var(--text); }
+.cardSub   { font-size: 11.5px; color: var(--text-ter); margin-bottom: 16px; }
+.optional  { font-size: 10.5px; color: var(--text-ter); font-weight: 400; margin-left: 4px; }
+
+.dropzone { border: 1.5px dashed var(--border-med); border-radius: var(--radius-lg); padding: 32px 16px; text-align: center; cursor: pointer; transition: all .18s; user-select: none; background: var(--surface3); }
+.dropzone:hover { border-color: var(--green-600); background: rgba(61,107,69,.08); }
+.drag    { border-color: var(--green-600) !important; background: rgba(61,107,69,.1) !important; }
+.hasFile { border-color: var(--green-600); border-style: solid; }
+.dropIcon  { font-size: 28px; margin-bottom: 9px; }
+.dropTitle { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.dropSub   { font-size: 11.5px; color: var(--text-sec); margin-top: 4px; }
+
+.row   { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 14px; }
+.field { display: flex; flex-direction: column; }
+.label { font-size: 11.5px; font-weight: 500; color: var(--text-sec); margin-bottom: 5px; }
+.input { padding: 8px 11px; border: 1px solid var(--border-med); border-radius: 7px; background: var(--surface3); color: var(--text); font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s; appearance: none; }
+.input:focus { border-color: var(--green-600); box-shadow: 0 0 0 2px rgba(143,176,122,.1); }
+
+.btnPrimary { margin-top: 14px; padding: 9px 24px; background: var(--green-400); color: var(--green-800); border: none; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all .15s; }
+.btnPrimary:hover:not(:disabled) { filter: brightness(1.08); }
+.btnPrimary:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Location picker layout */
+.locRow    { display: grid; grid-template-columns: 1fr 220px; gap: 14px; }
+.mapWrap   { border-radius: var(--radius-lg); overflow: hidden; }
+.locFields { display: flex; flex-direction: column; gap: 10px; }
+.locConfirm { font-size: 11px; color: var(--green-600); background: rgba(143,176,122,.1); border: 1px solid rgba(143,176,122,.2); border-radius: 6px; padding: 6px 10px; }
+
+.demoGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.demoCard { background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: all .14s; }
+.demoCard:hover { border-color: var(--green-600); background: rgba(61,107,69,.08); }
+.demoIcon { font-size: 18px; margin-bottom: 7px; }
+.demoName { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.demoLoc  { font-size: 10.5px; color: var(--text-ter); margin-top: 2px; }
+
+.codeBlock { background: var(--surface3); border-radius: 7px; padding: 13px 15px; font-family: monospace; font-size: 12px; color: var(--text-sec); line-height: 1.8; border: 1px solid var(--border); white-space: pre; margin-bottom: 9px; }
+.hint { font-size: 11px; color: var(--text-ter); }
+
+@media (max-width: 700px) { .row { grid-template-columns: 1fr; } .demoGrid { grid-template-columns: 1fr; } .locRow { grid-template-columns: 1fr; } }
+.demoSection {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(20,35,25,0.6);
+  border: 1px solid rgba(143,176,122,0.15);
+}
+
+.demoTitle {
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: #cfe8c6;
+}
+
+.demoGrid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.demoCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(143,176,122,0.2);
+
+  background: rgba(10,20,15,0.7);
+  color: #e6f2e6;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.demoCard:hover {
+  background: rgba(143,176,122,0.15);
+  transform: translateY(-2px);
+}

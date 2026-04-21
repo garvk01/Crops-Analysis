@@ -1,0 +1,112 @@
+ .page    { display: flex; flex-direction: column; gap: 14px; }
+.loading { display: flex; align-items: center; gap: 11px; padding: 50px; color: var(--text-ter); font-size: 13.5px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border-med); border-top-color: var(--green-600); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
+.cardTitle { font-size: 13px; font-weight: 500; color: var(--text); }
+.cardSub   { font-size: 10.5px; color: var(--text-ter); margin-top: 2px; }
+.chartHeader { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 13px; }
+.badgeRow    { display: flex; gap: 7px; flex-wrap: wrap; }
+.badgeGreen  { font-size: 10px; color: #8fb07a; background: rgba(143,176,122,.12); padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+.badgeAmber  { font-size: 10px; color: #c8a96e; background: rgba(200,169,110,.12); padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+
+/* Two column main layout */
+.mainRow  { display: grid; grid-template-columns: 1fr 260px; gap: 14px; align-items: start; }
+.leftCol  { display: flex; flex-direction: column; gap: 14px; }
+.rightCol { display: flex; flex-direction: column; gap: 14px; }
+
+/* Health gauge */
+.topRow   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.gaugeRow { display: flex; align-items: center; gap: 16px; }
+.ring     { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+.ringLabel { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; line-height: 1; }
+.ringScore { font-size: 20px; font-weight: 700; display: block; }
+.ringUnit  { font-size: 9px; color: var(--text-ter); }
+.gaugeRight { flex: 1; }
+.coveragePill { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; margin-bottom: 10px; }
+.metaList { display: flex; flex-direction: column; }
+.metaRow  { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.metaRow:last-child { border: none; }
+.metaLabel { font-size: 11px; color: var(--text-sec); }
+.metaVal   { font-size: 11px; font-weight: 500; color: var(--text); }
+
+/* Stage list */
+.stageList { display: flex; flex-direction: column; gap: 6px; }
+.stageRow  { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: var(--surface3); border-radius: 8px; }
+.stageIcon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.stageInfo { flex: 1; }
+.stageName { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-ter); font-weight: 500; }
+.stageDate { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 1px; }
+.stageRight { text-align: right; }
+
+/* Confidence */
+.confList { display: flex; flex-direction: column; gap: 11px; }
+.confMeta { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.confLabel { font-size: 11.5px; color: var(--text-sec); }
+.confVal   { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.progressBar  { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+.progressFill { height: 100%; border-radius: 2px; transition: width .7s ease; }
+
+/* Weather grid */
+.weatherGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+.weatherCell { background: var(--surface3); border-radius: 7px; padding: 8px; text-align: center; }
+.wMonth { font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-ter); font-weight: 500; }
+.wTemp  { font-size: 15px; font-weight: 700; color: var(--text); margin: 3px 0 1px; }
+.wRain  { font-size: 10px; color: #5a8fa3; }
+.weatherSource { font-size: 9.5px; color: var(--text-ter); }
+
+/* Dataset info rows */
+.infoRow { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.infoRow:last-child { border: none; }
+.infoKey { font-size: 11px; color: var(--text-sec); }
+.infoVal { font-size: 11px; font-weight: 500; color: var(--text); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btnOutline { padding: 8px 16px; border: 1px solid var(--border-med); border-radius: 7px; background: transparent; color: var(--text-sec); font-size: 12.5px; font-family: inherit; cursor: pointer; transition: all .12s; }
+.btnOutline:hover { background: var(--surface3); color: var(--text); }
+.btnPrimary { padding: 8px 20px; background: var(--green-400); color: var(--green-800); border: none; border-radius: 7px; font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer; }
+.btnPrimary:hover { filter: brightness(1.08); }
+
+@media (max-width: 900px) { .mainRow { grid-template-columns: 1fr; } .topRow { grid-template-columns: 1fr; } }
+.metaList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;              /* 🔥 spacing between rows */
+  margin-left: 16px;      /* space from circle */
+  margin-top: 6px;
+}
+
+/* each row */
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+
+  gap: 40px; /* 🔥 THIS FIXES YOUR ISSUE */
+}
+/* last row remove border */
+.metaRow:last-child {
+  border-bottom: none;
+}
+
+/* label */
+.metaLabel {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+
+  min-width: 120px;  /* 🔥 forces spacing */
+}
+
+/* value */
+.metaValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6f2e6;
+
+  text-align: right;
+}

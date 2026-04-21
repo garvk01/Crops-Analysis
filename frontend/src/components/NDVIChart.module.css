@@ -1,0 +1,15 @@
+.wrap { width: 100%; }
+.tooltip {
+  background: #1c2620; border: 1px solid rgba(141,176,122,0.15);
+  border-radius: 8px; padding: 9px 12px; font-size: 12px;
+}
+.tooltipDate  { color: #576a54; font-size: 10.5px; margin-bottom: 3px; }
+.tooltipVal   { color: #d4cfc4; }
+.tooltipVal strong { color: #8fb07a; }
+.tooltipPhase { color: #576a54; font-size: 10.5px; margin-top: 2px; }
+.phaseSection { margin-top: 14px; }
+.phaseBar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.phaseSeg { border-radius: 3px; }
+.phaseLegend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 7px; }
+.phaseItem { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-sec); }
+.phaseDot  { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }

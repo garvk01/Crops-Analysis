@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/*
+  Colour palette — split-complementary, muted earth tones
+  --------------------------------------------------------
+  Base:    #0f1410  deep forest night
+  Primary: #3d6b45  muted sage green (analogous)
+  Accent:  #8fb07a  light moss (tint of primary)
+  Warm:    #c8a96e  dry wheat / amber (split-comp warm)
+  Cool:    #5a8fa3  slate blue (split-comp cool)
+  Alert:   #b85c4a  terracotta (complementary to green)
+*/
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+}
+:root {
+  --bg:         #0f1410;
+  --surface:    #161d17;
+  --surface2:   #1c2620;
+  --surface3:   #22302a;
+  --surface4:   #2a3d32;
+  --border:     rgba(141,176,122,0.10);
+  --border-med: rgba(141,176,122,0.20);
+  --text:       #d4cfc4;
+  --text-sec:   #8fa88a;
+  --text-ter:   #576a54;
+
+  --green:      #3d6b45;
+  --green-l:    #8fb07a;
+  --green-xl:   #b8d4a2;
+  --green-50:   rgba(61,107,69,0.15);
+  --green-100:  rgba(61,107,69,0.25);
+  --green-400:  #3d6b45;
+  --green-600:  #8fb07a;
+  --green-800:  #b8d4a2;
+
+  --amber:      #c8a96e;
+  --amber-d:    #9c7d45;
+  --amber-50:   rgba(200,169,110,0.12);
+  --amber-400:  #c8a96e;
+  --amber-600:  #e8c98a;
+
+  --blue:       #5a8fa3;
+  --blue-l:     #8ab8cc;
+  --blue-50:    rgba(90,143,163,0.12);
+  --blue-400:   #5a8fa3;
+  --blue-600:   #8ab8cc;
+
+  --terra:      #b85c4a;
+  --terra-l:    #d4876f;
+  --red-50:     rgba(184,92,74,0.12);
+  --red-400:    #b85c4a;
+  --red-600:    #d4876f;
+
+  --radius:     10px;
+  --radius-lg:  13px;
+}
+
+html { font-family: 'DM Sans', system-ui, sans-serif; font-size: 14px; }
+body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 2px; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fade-in { animation: fadeIn 0.28s ease; }
+.spin    { animation: spin 0.7s linear infinite; }
