@@ -297,8 +297,8 @@ export default function Analysis() {
   const loadAnalysis = async () => {
     try {
       const [dataRes, analysisRes] = await Promise.all([
-        api.get(`/data/${id}`),
-        api.get(`/analysis/${id}`)
+        api.get(`/api/data/${id}`),
+        api.get(`/api/analysis/${id}`)
       ])
 
       const ts = dataRes.data.cropData.timeSeries.map(p => ({

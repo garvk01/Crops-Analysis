@@ -515,7 +515,7 @@ export default function Upload() {
       if (typeof location.lng === 'number') formData.append('lng', location.lng)
       if (location.label) formData.append('locationLabel', location.label)
 
-      const res = await api.post('/data/upload', formData, {
+      const res = await api.post('/api/data/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
