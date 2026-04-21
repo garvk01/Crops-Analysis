@@ -510,7 +510,7 @@ export default function Upload() {
       formData.append('name', name || file.name)
       formData.append('cropType', cropType)
 
-      // ✅ SAFE APPEND
+      
       if (typeof location.lat === 'number') formData.append('lat', location.lat)
       if (typeof location.lng === 'number') formData.append('lng', location.lng)
       if (location.label) formData.append('locationLabel', location.label)

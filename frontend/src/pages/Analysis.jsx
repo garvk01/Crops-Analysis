@@ -531,13 +531,14 @@ export default function Analysis() {
 
           {/* MAP */}
           <div className={styles.card}>
-            <FieldMapCard
-              lat={loc?.lat}
-              lng={loc?.lng}
-              label={loc?.label}
-              height={220}
-            />
-          </div>
+            {loc?.lat && loc?.lng && (
+  <FieldMapCard
+    lat={loc.lat}
+    lng={loc.lng}
+    label={loc.label}
+    height={220}
+  />
+)}
 
           {/* ✅ WEATHER SUMMARY FIXED */}
           {analysis?.weatherSummary && (
