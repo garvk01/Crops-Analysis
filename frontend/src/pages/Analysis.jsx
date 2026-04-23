@@ -273,11 +273,332 @@
 //   )
 // }
 // ---------------------------------------------------------------------------------------------------------------------------
+// import { useState, useEffect } from 'react'
+// import { useParams, useNavigate } from 'react-router-dom'
+// import toast from 'react-hot-toast'
+// import api from '../utils/api'
+// import { analyzeCropCycle, formatDate, formatDateShort, healthColor } from '../utils/analysis'
+// import NDVIChart from '../components/NDVIChart'
+// import CropBanner from '../components/CropBanner'
+// import RainChart from '../components/RainChart'
+// import SummaryCards from '../components/SummaryCards'
+// import InsightsPanel from '../components/InsightsPanel'
+// import FieldMapCard from '../components/FieldMapCard'
+// import styles from './Analysis.module.css'
+
+// export default function Analysis() {
+//   const { id } = useParams()
+//   const navigate = useNavigate()
+//   const [data, setData]       = useState(null)
+//   const [loading, setLoading] = useState(true)
+
+//   useEffect(() => { loadAnalysis() }, [id])
+
+//   const loadAnalysis = async () => {
+//     try {
+//       const [dataRes, analysisRes] = await Promise.all([
+//         api.get(`/api/data/${id}`),
+//         api.get(`/api/analysis/${id}`)
+//       ])
+
+//       const ts = dataRes.data.cropData.timeSeries.map(p => ({
+//         date: new Date(p.date),
+//         ndvi: p.ndvi
+//       }))
+
+//       setData({
+//         cropData: dataRes.data.cropData,
+//         analysis: analysisRes.data.analysis,
+//         local: analyzeCropCycle(ts)
+//       })
+
+//     } catch {
+//       toast.error('Failed to load analysis')
+//       navigate('/history')
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   const exportReport = () => {
+//     if (!data) return
+
+//     const { cropData, local: { stages, metrics }, analysis } = data
+
+//     const insightLines = (analysis?.insights || []).map(ins =>
+//       `  [${ins.type.toUpperCase()}] ${ins.title}\n  ${ins.message}`
+//     ).join('\n\n')
+
+//     const weatherLine = analysis?.weatherSummary
+//       ? `\nWEATHER SUMMARY\n  Avg Temp: ${analysis.weatherSummary.avgTemp}°C\n  Rainfall: ${analysis.weatherSummary.totalRain}mm`
+//       : ''
+
+//     const lines = [
+//       'CROP CYCLE ANALYSIS REPORT',
+//       '='.repeat(36),
+//       `Dataset  : ${cropData.name}`,
+//       `Crop     : ${cropData.cropType}`,
+//       cropData.location?.label ? `Location : ${cropData.location.label}` : '',
+//       '',
+//       'HEALTH METRICS',
+//       `  Health Score        : ${metrics.cropHealthScore}/100`,
+//       `  Vegetation Coverage : ${metrics.vegetationCoverage}`,
+//       `  Growing Season      : ${metrics.growingSeasonDays} days`,
+//       `  Peak NDVI           : ${metrics.maxNDVI}`,
+//       `  Average NDVI        : ${metrics.averageNDVI}`,
+//       `  NDVI Variance       : ${metrics.ndviVariance}`,
+//       '',
+//       'DETECTED STAGES',
+//       `  Growth Start  : ${formatDate(stages.growthStart.date)}`,
+//       `  Peak Growth   : ${formatDate(stages.peakGrowth.date)}`,
+//       `  Harvest Stage : ${formatDate(stages.harvest.date)}`,
+//       weatherLine,
+//       insightLines ? `\nSMART INSIGHTS\n${insightLines}` : '',
+//       '',
+//       `Generated : ${new Date().toLocaleString()}`,
+//       'CropCycle Analysis System v1.1'
+//     ].filter(Boolean).join('\n')
+
+//     const blob = new Blob([lines], { type: 'text/plain' })
+//     const url  = URL.createObjectURL(blob)
+//     const a    = document.createElement('a')
+//     a.href = url
+//     a.download = `${cropData.name.replace(/\s+/g,'_')}_analysis.txt`
+//     a.click()
+//     URL.revokeObjectURL(url)
+
+//     toast.success('Report exported!')
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className={styles.loading}>
+//         <div className={styles.spinner} />
+//         Running analysis...
+//       </div>
+//     )
+//   }
+
+//   if (!data) return null
+
+//   const { cropData, local, analysis } = data
+//   const { stages, metrics, phases, timeSeries } = local
+//   const hc   = healthColor(metrics.cropHealthScore)
+//   const circ = 2 * Math.PI * 40
+//   const dash = circ * (1 - metrics.cropHealthScore / 100)
+//   const loc  = cropData.location
+
+//   return (
+//     <div className={`${styles.page} fade-in`}>
+
+//       {/* ✅ FIXED: correct weather binding */}
+//       <SummaryCards
+//         metrics={metrics}
+//         weather={analysis?.weatherSummary}
+//         stages={stages}
+//       />
+
+//       <CropBanner
+//         cropType={cropData.cropType}
+//         datasetName={cropData.name}
+//         location={loc?.label}
+//       />
+
+//       <div className={styles.mainRow}>
+
+//         {/* LEFT SIDE */}
+//      <div className={styles.leftCol}>
+
+//   {/* TOP ROW */}
+//   <div className={styles.topRow}>
+
+//     {/* HEALTH CARD */}
+//     <div className={styles.card}>
+//       <div className={styles.gaugeRow}>
+
+//         <div className={styles.ring}>
+//           <svg width="96" height="96" viewBox="0 0 96 96">
+//             <circle cx="48" cy="48" r="40" fill="none" stroke="var(--surface3)" strokeWidth="8"/>
+//             <circle cx="48" cy="48" r="40" fill="none" stroke={hc} strokeWidth="8"
+//               strokeDasharray={circ.toFixed(1)}
+//               strokeDashoffset={dash.toFixed(1)}
+//               strokeLinecap="round"
+//               style={{ transform: 'rotate(-90deg)', transformOrigin: '48px 48px' }}/>
+//           </svg>
+
+//           <div className={styles.ringLabel}>
+//             <span className={styles.ringScore} style={{ color: hc }}>
+//               {metrics.cropHealthScore}
+//             </span>
+//             <span className={styles.ringUnit}>/100</span>
+//           </div>
+//         </div>
+
+//         {/* RIGHT SIDE DETAILS */}
+//       <div className={styles.metaList}>
+//   <div className={styles.metaRow}>
+//     <span className={styles.metaLabel}>Peak NDVI</span>
+//     <span className={styles.metaValue}>0.800</span>
+//   </div>
+
+//   <div className={styles.metaRow}>
+//     <span className={styles.metaLabel}>Avg NDVI</span>
+//     <span className={styles.metaValue}>0.540</span>
+//   </div>
+
+//   <div className={styles.metaRow}>
+//     <span className={styles.metaLabel}>Season</span>
+//     <span className={styles.metaValue}>82d</span>
+//   </div>
+
+//   <div className={styles.metaRow}>
+//     <span className={styles.metaLabel}>Variance</span>
+//     <span className={styles.metaValue}>0.0388</span>
+//   </div>
+// </div>
+
+//       </div>
+//     </div>
+
+//     {/* DETECTED STAGES */}
+//     <div className={styles.card}>
+//       <div className={styles.cardTitle}>Detected stages</div>
+
+//       <div className={styles.stageList}>
+//         {[
+//           { icon: '🌱', label: 'Growth start', s: stages.growthStart },
+//           { icon: '🔝', label: 'Peak growth', s: stages.peakGrowth },
+//           { icon: '🌾', label: 'Harvest stage', s: stages.harvest },
+//         ].map(({ icon, label, s }) => (
+//           <div key={label} className={styles.stageRow}>
+//             <div className={styles.stageIcon}>{icon}</div>
+
+//             <div className={styles.stageInfo}>
+//               <div className={styles.stageName}>{label}</div>
+//               <div className={styles.stageDate}>{formatDate(s.date)}</div>
+//             </div>
+
+//             <div className={styles.stageRight}>
+//               <div>NDVI {s.ndvi.toFixed(3)}</div>
+//               <div className={styles.stageConf}>{s.confidence}%</div>
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+
+//   </div>
+
+//   {/* NDVI */}
+//   <div className={styles.card}>
+//     <div className={styles.cardTitle}>NDVI time series</div>
+//     <NDVIChart timeSeries={timeSeries} stages={stages} phases={phases} />
+//   </div>
+
+//   {/* CONFIDENCE */}
+//   <div className={styles.card}>
+//     <div className={styles.cardTitle}>Detection confidence</div>
+
+//     <div className={styles.confList}>
+//       {[
+//         { label: 'Growth Start', val: stages.growthStart.confidence },
+//         { label: 'Peak Growth', val: stages.peakGrowth.confidence },
+//         { label: 'Harvest', val: stages.harvest.confidence },
+//       ].map(({ label, val }) => (
+//         <div key={label} className={styles.confRow}>
+//           <div className={styles.confMeta}>
+//             <span>{label}</span>
+//             <span>{val}%</span>
+//           </div>
+//           <div className={styles.progressBar}>
+//             <div className={styles.progressFill} style={{ width: `${val}%` }} />
+//           </div>
+//         </div>
+//       ))}
+//     </div>
+//   </div>
+
+//   {/* RAIN */}
+//   <div className={styles.card}>
+//     <div className={styles.cardTitle}>Rainfall & crop correlation</div>
+//     <RainChart cropType={cropData.cropType} />
+//   </div>
+
+// </div>
+
+//         {/* RIGHT SIDE */}
+//         <div className={styles.rightCol}>
+
+//           {/* MAP */}
+//           <div className={styles.card}>
+//             <FieldMapCard
+//               lat={loc?.lat}
+//               lng={loc?.lng}
+//               label={loc?.label}
+//               height={220}
+//             />
+//           </div>
+
+//           {/* ✅ WEATHER SUMMARY FIXED */}
+//           {analysis?.weatherSummary && (
+//             <div className={styles.card}>
+//               <div className={styles.cardTitle}>Weather summary</div>
+
+//               <div className={styles.infoRow}>
+//                 <span>Temperature</span>
+//                 <span>{analysis.weatherSummary.avgTemp}°C</span>
+//               </div>
+
+//               <div className={styles.infoRow}>
+//                 <span>Rainfall</span>
+//                 <span>{analysis.weatherSummary.totalRain} mm</span>
+//               </div>
+
+//               <div className={styles.infoRow}>
+//                 <span>Humidity</span>
+//                 <span>{analysis.weatherSummary.avgHumidity}%</span>
+//               </div>
+//             </div>
+//           )}
+
+//           {/* DATASET INFO */}
+//           <div className={styles.card}>
+//             <div className={styles.cardTitle}>Dataset info</div>
+
+//             <div className={styles.infoRow}>
+//               <span>Crop</span>
+//               <span>{cropData.cropType}</span>
+//             </div>
+
+//             <div className={styles.infoRow}>
+//               <span>Location</span>
+//               <span>{loc?.label || '—'}</span>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* INSIGHTS */}
+//       <div className={styles.card}>
+//         <InsightsPanel cropDataId={id} preloadedInsights={analysis?.insights} />
+//       </div>
+
+//       {/* ACTIONS */}
+//       <div className={styles.actions}>
+//         <button onClick={() => navigate('/upload')}>New analysis</button>
+//         <button onClick={() => navigate('/history')}>All datasets</button>
+//         <button onClick={exportReport}>Export report</button>
+//       </div>
+//     </div>
+//   )
+// }
+// -------------------------------------------------------------------------------------------------------
+
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
-import { analyzeCropCycle, formatDate, formatDateShort, healthColor } from '../utils/analysis'
+import { analyzeCropCycle, formatDate, healthColor } from '../utils/analysis'
 import NDVIChart from '../components/NDVIChart'
 import CropBanner from '../components/CropBanner'
 import RainChart from '../components/RainChart'
@@ -289,10 +610,12 @@ import styles from './Analysis.module.css'
 export default function Analysis() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [data, setData]       = useState(null)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadAnalysis() }, [id])
+  useEffect(() => {
+    loadAnalysis()
+  }, [id])
 
   const loadAnalysis = async () => {
     try {
@@ -311,63 +634,12 @@ export default function Analysis() {
         analysis: analysisRes.data.analysis,
         local: analyzeCropCycle(ts)
       })
-
     } catch {
       toast.error('Failed to load analysis')
       navigate('/history')
     } finally {
       setLoading(false)
     }
-  }
-
-  const exportReport = () => {
-    if (!data) return
-
-    const { cropData, local: { stages, metrics }, analysis } = data
-
-    const insightLines = (analysis?.insights || []).map(ins =>
-      `  [${ins.type.toUpperCase()}] ${ins.title}\n  ${ins.message}`
-    ).join('\n\n')
-
-    const weatherLine = analysis?.weatherSummary
-      ? `\nWEATHER SUMMARY\n  Avg Temp: ${analysis.weatherSummary.avgTemp}°C\n  Rainfall: ${analysis.weatherSummary.totalRain}mm`
-      : ''
-
-    const lines = [
-      'CROP CYCLE ANALYSIS REPORT',
-      '='.repeat(36),
-      `Dataset  : ${cropData.name}`,
-      `Crop     : ${cropData.cropType}`,
-      cropData.location?.label ? `Location : ${cropData.location.label}` : '',
-      '',
-      'HEALTH METRICS',
-      `  Health Score        : ${metrics.cropHealthScore}/100`,
-      `  Vegetation Coverage : ${metrics.vegetationCoverage}`,
-      `  Growing Season      : ${metrics.growingSeasonDays} days`,
-      `  Peak NDVI           : ${metrics.maxNDVI}`,
-      `  Average NDVI        : ${metrics.averageNDVI}`,
-      `  NDVI Variance       : ${metrics.ndviVariance}`,
-      '',
-      'DETECTED STAGES',
-      `  Growth Start  : ${formatDate(stages.growthStart.date)}`,
-      `  Peak Growth   : ${formatDate(stages.peakGrowth.date)}`,
-      `  Harvest Stage : ${formatDate(stages.harvest.date)}`,
-      weatherLine,
-      insightLines ? `\nSMART INSIGHTS\n${insightLines}` : '',
-      '',
-      `Generated : ${new Date().toLocaleString()}`,
-      'CropCycle Analysis System v1.1'
-    ].filter(Boolean).join('\n')
-
-    const blob = new Blob([lines], { type: 'text/plain' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = `${cropData.name.replace(/\s+/g,'_')}_analysis.txt`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    toast.success('Report exported!')
   }
 
   if (loading) {
@@ -383,15 +655,14 @@ export default function Analysis() {
 
   const { cropData, local, analysis } = data
   const { stages, metrics, phases, timeSeries } = local
-  const hc   = healthColor(metrics.cropHealthScore)
+  const hc = healthColor(metrics.cropHealthScore)
   const circ = 2 * Math.PI * 40
   const dash = circ * (1 - metrics.cropHealthScore / 100)
-  const loc  = cropData.location
+  const loc = cropData.location
 
   return (
     <div className={`${styles.page} fade-in`}>
 
-      {/* ✅ FIXED: correct weather binding */}
       <SummaryCards
         metrics={metrics}
         weather={analysis?.weatherSummary}
@@ -407,129 +678,98 @@ export default function Analysis() {
       <div className={styles.mainRow}>
 
         {/* LEFT SIDE */}
-     <div className={styles.leftCol}>
+        <div className={styles.leftCol}>
 
-  {/* TOP ROW */}
-  <div className={styles.topRow}>
+          {/* TOP ROW */}
+          <div className={styles.topRow}>
 
-    {/* HEALTH CARD */}
-    <div className={styles.card}>
-      <div className={styles.gaugeRow}>
+            {/* HEALTH CARD */}
+            <div className={styles.card}>
+              <div className={styles.gaugeRow}>
 
-        <div className={styles.ring}>
-          <svg width="96" height="96" viewBox="0 0 96 96">
-            <circle cx="48" cy="48" r="40" fill="none" stroke="var(--surface3)" strokeWidth="8"/>
-            <circle cx="48" cy="48" r="40" fill="none" stroke={hc} strokeWidth="8"
-              strokeDasharray={circ.toFixed(1)}
-              strokeDashoffset={dash.toFixed(1)}
-              strokeLinecap="round"
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '48px 48px' }}/>
-          </svg>
+                <div className={styles.ring}>
+                  <svg width="96" height="96" viewBox="0 0 96 96">
+                    <circle cx="48" cy="48" r="40" fill="none" stroke="var(--surface3)" strokeWidth="8"/>
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="40"
+                      fill="none"
+                      stroke={hc}
+                      strokeWidth="8"
+                      strokeDasharray={circ.toFixed(1)}
+                      strokeDashoffset={dash.toFixed(1)}
+                      strokeLinecap="round"
+                      style={{ transform: 'rotate(-90deg)', transformOrigin: '48px 48px' }}
+                    />
+                  </svg>
 
-          <div className={styles.ringLabel}>
-            <span className={styles.ringScore} style={{ color: hc }}>
-              {metrics.cropHealthScore}
-            </span>
-            <span className={styles.ringUnit}>/100</span>
-          </div>
-        </div>
+                  <div className={styles.ringLabel}>
+                    <span className={styles.ringScore} style={{ color: hc }}>
+                      {metrics.cropHealthScore}
+                    </span>
+                    <span className={styles.ringUnit}>/100</span>
+                  </div>
+                </div>
 
-        {/* RIGHT SIDE DETAILS */}
-      <div className={styles.metaList}>
-  <div className={styles.metaRow}>
-    <span className={styles.metaLabel}>Peak NDVI</span>
-    <span className={styles.metaValue}>0.800</span>
-  </div>
+                <div className={styles.metaList}>
+                  <div className={styles.metaRow}>
+                    <span>Peak NDVI</span>
+                    <span>{metrics.maxNDVI.toFixed(3)}</span>
+                  </div>
+                  <div className={styles.metaRow}>
+                    <span>Avg NDVI</span>
+                    <span>{metrics.averageNDVI.toFixed(3)}</span>
+                  </div>
+                  <div className={styles.metaRow}>
+                    <span>Season</span>
+                    <span>{metrics.growingSeasonDays}d</span>
+                  </div>
+                  <div className={styles.metaRow}>
+                    <span>Variance</span>
+                    <span>{metrics.ndviVariance.toFixed(4)}</span>
+                  </div>
+                </div>
 
-  <div className={styles.metaRow}>
-    <span className={styles.metaLabel}>Avg NDVI</span>
-    <span className={styles.metaValue}>0.540</span>
-  </div>
-
-  <div className={styles.metaRow}>
-    <span className={styles.metaLabel}>Season</span>
-    <span className={styles.metaValue}>82d</span>
-  </div>
-
-  <div className={styles.metaRow}>
-    <span className={styles.metaLabel}>Variance</span>
-    <span className={styles.metaValue}>0.0388</span>
-  </div>
-</div>
-
-      </div>
-    </div>
-
-    {/* DETECTED STAGES */}
-    <div className={styles.card}>
-      <div className={styles.cardTitle}>Detected stages</div>
-
-      <div className={styles.stageList}>
-        {[
-          { icon: '🌱', label: 'Growth start', s: stages.growthStart },
-          { icon: '🔝', label: 'Peak growth', s: stages.peakGrowth },
-          { icon: '🌾', label: 'Harvest stage', s: stages.harvest },
-        ].map(({ icon, label, s }) => (
-          <div key={label} className={styles.stageRow}>
-            <div className={styles.stageIcon}>{icon}</div>
-
-            <div className={styles.stageInfo}>
-              <div className={styles.stageName}>{label}</div>
-              <div className={styles.stageDate}>{formatDate(s.date)}</div>
+              </div>
             </div>
 
-            <div className={styles.stageRight}>
-              <div>NDVI {s.ndvi.toFixed(3)}</div>
-              <div className={styles.stageConf}>{s.confidence}%</div>
+            {/* STAGES */}
+            <div className={styles.card}>
+              <div className={styles.cardTitle}>Detected stages</div>
+
+              {[
+                { label: 'Growth start', s: stages.growthStart },
+                { label: 'Peak growth', s: stages.peakGrowth },
+                { label: 'Harvest stage', s: stages.harvest },
+              ].map(({ label, s }) => (
+                <div key={label} className={styles.stageRow}>
+                  <div>{label}</div>
+                  <div>{formatDate(s.date)}</div>
+                  <div>NDVI {s.ndvi.toFixed(3)}</div>
+                </div>
+              ))}
             </div>
+
           </div>
-        ))}
-      </div>
-    </div>
 
-  </div>
-
-  {/* NDVI */}
-  <div className={styles.card}>
-    <div className={styles.cardTitle}>NDVI time series</div>
-    <NDVIChart timeSeries={timeSeries} stages={stages} phases={phases} />
-  </div>
-
-  {/* CONFIDENCE */}
-  <div className={styles.card}>
-    <div className={styles.cardTitle}>Detection confidence</div>
-
-    <div className={styles.confList}>
-      {[
-        { label: 'Growth Start', val: stages.growthStart.confidence },
-        { label: 'Peak Growth', val: stages.peakGrowth.confidence },
-        { label: 'Harvest', val: stages.harvest.confidence },
-      ].map(({ label, val }) => (
-        <div key={label} className={styles.confRow}>
-          <div className={styles.confMeta}>
-            <span>{label}</span>
-            <span>{val}%</span>
+          {/* NDVI */}
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>NDVI time series</div>
+            <NDVIChart timeSeries={timeSeries} stages={stages} phases={phases} />
           </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${val}%` }} />
+
+          {/* RAIN */}
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>Rainfall</div>
+            <RainChart cropType={cropData.cropType} />
           </div>
+
         </div>
-      ))}
-    </div>
-  </div>
-
-  {/* RAIN */}
-  <div className={styles.card}>
-    <div className={styles.cardTitle}>Rainfall & crop correlation</div>
-    <RainChart cropType={cropData.cropType} />
-  </div>
-
-</div>
 
         {/* RIGHT SIDE */}
         <div className={styles.rightCol}>
 
-          {/* MAP */}
           <div className={styles.card}>
             <FieldMapCard
               lat={loc?.lat}
@@ -539,56 +779,23 @@ export default function Analysis() {
             />
           </div>
 
-          {/* ✅ WEATHER SUMMARY FIXED */}
           {analysis?.weatherSummary && (
             <div className={styles.card}>
-              <div className={styles.cardTitle}>Weather summary</div>
-
-              <div className={styles.infoRow}>
-                <span>Temperature</span>
-                <span>{analysis.weatherSummary.avgTemp}°C</span>
-              </div>
-
-              <div className={styles.infoRow}>
-                <span>Rainfall</span>
-                <span>{analysis.weatherSummary.totalRain} mm</span>
-              </div>
-
-              <div className={styles.infoRow}>
-                <span>Humidity</span>
-                <span>{analysis.weatherSummary.avgHumidity}%</span>
-              </div>
+              <div className={styles.cardTitle}>Weather</div>
+              <div>Temp: {analysis.weatherSummary.avgTemp}°C</div>
+              <div>Rain: {analysis.weatherSummary.totalRain} mm</div>
             </div>
           )}
 
-          {/* DATASET INFO */}
-          <div className={styles.card}>
-            <div className={styles.cardTitle}>Dataset info</div>
-
-            <div className={styles.infoRow}>
-              <span>Crop</span>
-              <span>{cropData.cropType}</span>
-            </div>
-
-            <div className={styles.infoRow}>
-              <span>Location</span>
-              <span>{loc?.label || '—'}</span>
-            </div>
-          </div>
         </div>
+
       </div>
 
-      {/* INSIGHTS */}
       <div className={styles.card}>
         <InsightsPanel cropDataId={id} preloadedInsights={analysis?.insights} />
       </div>
 
-      {/* ACTIONS */}
-      <div className={styles.actions}>
-        <button onClick={() => navigate('/upload')}>New analysis</button>
-        <button onClick={() => navigate('/history')}>All datasets</button>
-        <button onClick={exportReport}>Export report</button>
-      </div>
     </div>
   )
 }
+
