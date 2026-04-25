@@ -106,7 +106,7 @@ import styles from './FieldMapCard.module.css'
 
 /**
  * FieldMapCard — Leaflet-based interactive map
- * FIXED: Proper container initialization, CORS handling, error states
+ * ✅ FIXED: Proper initialization, CORS, error handling
  * ✅ Works on Render & Vercel deployments
  */
 export default function FieldMapCard({ lat, lng, label, zoom = 11, height = 280 }) {
@@ -124,111 +124,154 @@ export default function FieldMapCard({ lat, lng, label, zoom = 11, height = 280 
 
     const loadLeaflet = async () => {
       try {
-        // ✅ Load CSS if not already loaded
+        // ✅ Load Leaflet CSS if not already loaded
         if (!document.getElementById('leaflet-css')) {
           const link = document.createElement('link')
           link.id = 'leaflet-css'
           link.rel = 'stylesheet'
           link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
-          link.onerror = () => setMapError('Failed to load Leaflet CSS')
+          link.onerror = () => {
+            console.error('[Map] Failed to load Leaflet CSS')
+            setMapError('CDN unavailable')
+          }
           document.head.appendChild(link)
-          
-          // Wait for CSS to load
           await new Promise(resolve => setTimeout(resolve, 100))
         }
 
-        // ✅ Load JS if not already loaded
+        // ✅ Load Leaflet JS if not already loaded
         if (!window.L) {
           await new Promise((resolve, reject) => {
             const script = document.createElement('script')
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
             script.async = true
-            script.onload = resolve
-            script.onerror = reject
+            script.onload = () => {
+              console.log('[Map] Leaflet.js loaded successfully')
+              resolve()
+            }
+            script.onerror = () => {
+              console.error('[Map] Failed to load Leaflet.js')
+              reject(new Error('Leaflet.js CDN failed'))
+            }
             document.head.appendChild(script)
           })
         }
 
-        // ✅ Ensure container is properly sized before initializing
-        if (mapRef.current && mapRef.current.offsetHeight === 0) {
-          await new Promise(resolve => setTimeout(resolve, 50))
+        // ✅ Wait for container to be properly rendered and sized
+        await new Promise(resolve => setTimeout(resolve, 50))
+        
+        if (!mapRef.current) {
+          throw new Error('Map container not found')
+        }
+
+        // ✅ Ensure container has proper dimensions
+        const containerHeight = mapRef.current.offsetHeight
+        if (containerHeight === 0) {
+          console.warn('[Map] Container has 0 height, forcing styles')
+          mapRef.current.style.height = `${height}px`
         }
 
         const L = window.L
         
-        // ✅ Clean up existing map if any
+        // ✅ Clean up existing map instance
         if (leafletRef.current) {
-          leafletRef.current.remove()
+          try {
+            leafletRef.current.remove()
+          } catch (e) {
+            console.warn('[Map] Error removing old map:', e.message)
+          }
         }
 
         // ✅ Initialize map with proper settings
+        console.log(`[Map] Initializing map at lat=${validLat}, lng=${validLng}`)
+        
         const map = L.map(mapRef.current, {
           center: [validLat, validLng],
           zoom,
           zoomControl: true,
           scrollWheelZoom: false,
           touchZoom: true,
-          doubleClickZoom: true
+          doubleClickZoom: true,
+          attributionControl: true
         })
 
-        // ✅ Add tile layer with CORS headers
+        // ✅ Add tile layer WITH CORS headers (CRITICAL for production)
         L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>',
-          maxZoom: 18,
-          crossOrigin: 'anonymous'  // ✅ IMPORTANT for deployed servers
+          maxZoom: 19,
+          minZoom: 1,
+          crossOrigin: 'anonymous'  // ✅ CRITICAL: enables CORS for production
         }).addTo(map)
 
-        // ✅ Custom green marker
+        // ✅ Custom green marker styling
         const icon = L.divIcon({
           className: 'custom-marker',
           html: `<div style="
-            width:14px;
-            height:14px;
-            background:#3d6b45;
-            border:2.5px solid #8fb07a;
-            border-radius:50%;
-            box-shadow:0 0 0 4px rgba(61,107,69,0.25);
-            box-sizing:border-box;
+            width: 14px;
+            height: 14px;
+            background: #3d6b45;
+            border: 2.5px solid #8fb07a;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(61, 107, 69, 0.25);
+            box-sizing: border-box;
           "></div>`,
           iconSize: [14, 14],
           iconAnchor: [7, 7]
         })
 
-        // ✅ Add marker with popup
-        L.marker([validLat, validLng], { icon })
+        // ✅ Add marker with coordinates popup
+        L.marker([validLat, validLng], { icon, draggable: false })
           .addTo(map)
-          .bindPopup(`<strong>${label || 'Farm location'}</strong><br/>${validLat.toFixed(4)}, ${validLng.toFixed(4)}`)
+          .bindPopup(`
+            <div style="font-size: 12px; text-align: center;">
+              <strong>${label || 'Location'}</strong><br/>
+              ${validLat.toFixed(4)}°N, ${validLng.toFixed(4)}°E
+            </div>
+          `)
 
-        // ✅ Force map resize to render correctly
+        // ✅ Force map to resize and render correctly (CRITICAL)
+        map.invalidateSize()
+        
+        // Do it again after a short delay to ensure it sticks
         setTimeout(() => {
           map.invalidateSize()
-        }, 100)
+          console.log('[Map] Map invalidated and ready')
+        }, 200)
 
         leafletRef.current = map
         setMapLoaded(true)
         setMapError(null)
 
       } catch (err) {
-        console.warn('[FieldMapCard] Map initialization failed:', err.message)
+        console.error('[Map] Initialization failed:', err.message)
         setMapError(err.message)
+        setMapLoaded(false)
       }
     }
 
     loadLeaflet()
 
+    // ✅ Cleanup on unmount
     return () => {
       if (leafletRef.current) {
-        leafletRef.current.remove()
-        leafletRef.current = null
+        try {
+          leafletRef.current.remove()
+          leafletRef.current = null
+        } catch (e) {
+          console.warn('[Map] Error during cleanup:', e.message)
+        }
       }
     }
-  }, [validLat, validLng, zoom])
+  }, [validLat, validLng, zoom, height])
 
   return (
     <div className={styles.wrap}>
       <div 
-        className={styles.mapContainer} 
-        style={{ height, position: 'relative' }} 
+        className={styles.mapContainer}
+        style={{ 
+          height: `${height}px`,
+          position: 'relative',
+          minHeight: `${height}px`
+        }} 
         ref={mapRef}
       >
         {!mapLoaded && !mapError && (
@@ -238,44 +281,48 @@ export default function FieldMapCard({ lat, lng, label, zoom = 11, height = 280 
             left: '50%',
             transform: 'translate(-50%, -50%)',
             color: '#888',
-            fontSize: '12px',
-            zIndex: 1
+            fontSize: '13px',
+            zIndex: 10,
+            pointerEvents: 'none'
           }}>
-            Loading map...
+            ⏳ Loading map...
           </div>
         )}
         {mapError && (
           <div style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            inset: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#f5f5f5',
-            color: '#d32f2f',
+            background: '#1a1a1a',
+            color: '#ff6b6b',
             fontSize: '12px',
             textAlign: 'center',
-            padding: '10px',
-            zIndex: 1
+            padding: '20px',
+            zIndex: 10,
+            pointerEvents: 'none'
           }}>
-            <span>Map failed to load. Using fallback coordinates.</span>
+            <div>
+              <div style={{ fontSize: '16px', marginBottom: '8px' }}>⚠️</div>
+              <div>Map unavailable</div>
+              <div style={{ fontSize: '11px', marginTop: '4px', color: '#888' }}>
+                Showing location: {validLat.toFixed(2)}°N, {validLng.toFixed(2)}°E
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       <div className={styles.coordBar}>
         <span className={styles.coordIcon}>📍</span>
-        <span className={styles.coordLabel}>{label || 'Farm location'}</span>
-        {hasCoords && (
+        <span className={styles.coordLabel}>{label || 'Location'}</span>
+        {hasCoords ? (
           <span className={styles.coordValues}>
             {validLat.toFixed(4)}°N, {validLng.toFixed(4)}°E
           </span>
-        )}
-        {!hasCoords && (
-          <span className={styles.coordMissing}>No coordinates set</span>
+        ) : (
+          <span className={styles.coordMissing}>No coordinates</span>
         )}
       </div>
     </div>
