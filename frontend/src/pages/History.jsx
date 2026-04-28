@@ -115,7 +115,6 @@ export default function History() {
   const [datasets, setDatasets] = useState([])
   const [loading, setLoading]   = useState(true)
   const [deleting, setDeleting] = useState(null)
-  const [error, setError]       = useState(null)  // ✅ Track error separately
   const navigate = useNavigate()
 
   useEffect(() => { loadDatasets() }, [])
@@ -123,42 +122,24 @@ export default function History() {
   const loadDatasets = async () => {
     try {
       setLoading(true)
-      setError(null)  // Clear previous errors
       
       const res = await api.get('/data')
       
-      // ✅ Better error checking
-      if (!res.data) {
-        setError('No response from server')
-        setDatasets([])
-        return
-      }
-      
-      const ds = res.data.datasets || []
+      // ✅ Handle response properly
+      const ds = res.data?.datasets || []
       setDatasets(ds)
       
-      // ✅ Don't show error toast for empty datasets
-      // It's normal to have no datasets on first load
-      if (ds.length === 0) {
-        console.log('No datasets - this is normal on first load')
-      }
-      
     } catch (err) {
-      // ✅ Better error handling
-      console.error('Failed to load datasets:', err)
-      
-      const errorMsg = err.response?.data?.message 
-        || err.message 
-        || 'Failed to load datasets'
-      
-      setError(errorMsg)
-      setDatasets([])
-      
-      // ✅ Only show toast for actual errors, not for empty state
-      if (err.response?.status !== 404) {  // 404 is OK (no datasets)
-        toast.error(errorMsg)
+      // ✅ 404 is expected when no datasets exist - treat as empty, not error
+      if (err.response?.status === 404) {
+        console.log('No datasets found (404) - this is normal')
+        setDatasets([])
+      } else {
+        // Real error - show toast
+        console.error('Failed to load datasets:', err)
+        toast.error(err.response?.data?.message || 'Failed to load datasets')
+        setDatasets([])
       }
-      
     } finally {
       setLoading(false)
     }
@@ -190,36 +171,19 @@ export default function History() {
     </div>
   )
 
-  // ✅ Error state (show if fetch actually failed)
-  if (error && datasets.length === 0) return (
-    <div className={styles.empty}>
-      <div className={styles.emptyIcon}>⚠️</div>
-      <p className={styles.emptyTitle}>{error}</p>
-      <p className={styles.emptySub}>Try uploading your first dataset or refresh the page</p>
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-        <button className={styles.btnPrimary} onClick={() => navigate('/upload')}>
-          + Upload Dataset
-        </button>
-        <button className={styles.btnSecondary} onClick={loadDatasets}>
-          ↻ Retry
-        </button>
-      </div>
-    </div>
-  )
-
-  // ✅ Empty state (normal - no datasets uploaded yet)
-  if (datasets.length === 0) return (
+  // ✅ Empty state (including 404 - no datasets)
+  if (!datasets || datasets.length === 0) return (
     <div className={styles.empty}>
       <div className={styles.emptyIcon}>📂</div>
       <p className={styles.emptyTitle}>No datasets yet</p>
-      <p className={styles.emptySub}>Upload your first NDVI CSV file to get started</p>
+      <p className={styles.emptySub}>Upload your first NDVI CSV file to start analyzing crop cycles</p>
       <button className={styles.btnPrimary} onClick={() => navigate('/upload')}>
-        Upload Your First Dataset →
+        + Upload Your First Dataset
       </button>
     </div>
   )
 
-  // ✅ Success state - show datasets
+  // ✅ Success state - show datasets list
   return (
     <div className={`${styles.page} fade-in`}>
       <div className={styles.header}>
@@ -247,7 +211,7 @@ export default function History() {
               <div className={styles.itemMeta}>
                 <span className={styles.tag}>{d.cropType || 'Unknown'}</span>
                 <span className={styles.dot}>·</span>
-                <span>{d.source === 'demo' ? '📌 Demo dataset' : '📤 CSV upload'}</span>
+                <span>{d.source === 'demo' ? '📌 Demo' : '📤 Upload'}</span>
                 <span className={styles.dot}>·</span>
                 <span>{formatDate(d.uploadedAt) || 'Recently'}</span>
               </div>
