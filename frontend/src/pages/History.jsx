@@ -126,24 +126,20 @@ export default function History() {
       setLoading(true)
       
       console.log('🔍 Fetching datasets from /api/data...')
-      const res = await api.get('/data')
+      const res = await api.get('/api/data')
       
       console.log('📦 Response received:', res)
       console.log('📦 Response data:', res.data)
       
-      // ✅ Handle different response formats
       let ds = []
       
       if (res.data?.datasets && Array.isArray(res.data.datasets)) {
-        // Format: { success: true, datasets: [...] }
         ds = res.data.datasets
         console.log('✅ Found datasets in res.data.datasets:', ds.length, 'datasets')
       } else if (Array.isArray(res.data)) {
-        // Format: [...]
         ds = res.data
         console.log('✅ Found datasets as array:', ds.length, 'datasets')
       } else if (res.data?.cropData) {
-        // Format: { cropData: {...} }
         ds = Array.isArray(res.data.cropData) ? res.data.cropData : []
         console.log('✅ Found datasets in res.data.cropData:', ds.length, 'datasets')
       }
@@ -157,7 +153,6 @@ export default function History() {
       console.error('Error data:', err.response?.data)
       console.error('Error message:', err.message)
       
-      // ✅ 404 is expected when no datasets exist - treat as empty, not error
       if (err.response?.status === 404) {
         console.log('⚠️ 404 - No datasets found (this is normal on first use)')
         setDatasets([])
@@ -166,7 +161,6 @@ export default function History() {
         toast.error('Session expired. Please login again.')
         navigate('/login')
       } else {
-        // Real error - show toast
         console.error('🚨 Real error occurred:', err.message)
         toast.error(err.response?.data?.message || err.message || 'Failed to load datasets')
         setDatasets([])
@@ -182,7 +176,7 @@ export default function History() {
     
     setDeleting(id)
     try {
-      await api.delete(`/data/${id}`)
+      await api.delete(`/api/data/${id}`)
       setDatasets(prev => prev.filter(d => d._id !== id))
       toast.success('Dataset deleted')
     } catch (err) {
@@ -194,7 +188,6 @@ export default function History() {
     }
   }
 
-  // ✅ Loading state
   if (loading) return (
     <div className={styles.loading}>
       <div className={styles.spinner} />
@@ -202,7 +195,6 @@ export default function History() {
     </div>
   )
 
-  // ✅ Empty state (no datasets)
   if (!datasets || datasets.length === 0) return (
     <div className={styles.empty}>
       <div className={styles.emptyIcon}>📂</div>
@@ -214,7 +206,6 @@ export default function History() {
     </div>
   )
 
-  // ✅ Success state - show datasets list
   return (
     <div className={`${styles.page} fade-in`}>
       <div className={styles.header}>
