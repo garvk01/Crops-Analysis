@@ -195,13 +195,11 @@ export default function FieldMapCard({ lat, lng, label, zoom = 11, height = 280 
         })
 
         // ✅ Add tile layer WITH CORS headers (CRITICAL for production)
-        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>',
-          maxZoom: 19,
-          minZoom: 1,
-          crossOrigin: 'anonymous'  // ✅ CRITICAL: enables CORS for production
-        }).addTo(map)
-
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+  maxZoom: 19,
+  minZoom: 1
+}).addTo(map)
         // ✅ Custom green marker styling
         const icon = L.divIcon({
           className: 'custom-marker',
